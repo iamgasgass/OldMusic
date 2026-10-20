@@ -9,6 +9,8 @@ final class OldMusicAppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        // Shake is used by "Shake to Shuffle", not by the system undo alert.
+        application.applicationSupportsShakeToEdit = false
         _ = MusicPlayer.shared
         return true
     }
@@ -39,11 +41,14 @@ final class OldMusicSceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.backgroundColor = .black
         self.window = window
         window.makeKeyAndVisible()
+        MusicSettings.shared.apply()
         MusicVolume.shared.install(in: window)
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         MusicPlayer.shared.refresh()
+        MusicSettings.shared.apply()
+        window?.rootViewController?.becomeFirstResponder()
         MusicVolume.shared.install(in: window)
     }
 }
@@ -65,6 +70,31 @@ final class OldMusicHostingController: UIHostingController<OldMusicRootView> {
                 }
             }
             .store(in: &cancellables)
+
+        // Become first responder again whenever the keyboard goes away, so
+        // shake gestures keep reaching `motionEnded`.
+        NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)
+            .sink { [weak self] _ in
+                self?.becomeFirstResponder()
+            }
+            .store(in: &cancellables)
+    }
+
+    override var canBecomeFirstResponder: Bool {
+        true
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        becomeFirstResponder()
+    }
+
+    override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        if motion == .motionShake {
+            NotificationCenter.default.post(name: .oldMusicDeviceShaken, object: nil)
+        } else {
+            super.motionEnded(motion, with: event)
+        }
     }
 
     @MainActor required dynamic init?(coder aDecoder: NSCoder) {

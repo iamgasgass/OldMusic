@@ -12,6 +12,7 @@ struct MusicNowPlayingView: View {
 
     @State private var artwork: UIImage = UIImage(named: "noartplaceholder") ?? UIImage()
     @State private var albumTracks: [MPMediaItem] = []
+    @State private var lyrics: String = ""
 
     // Flip state, same choreography as OldOS.
     @State private var switchToTracks = false
@@ -96,9 +97,17 @@ struct MusicNowPlayingView: View {
                             )
 
                         if showTimingControls {
-                            MusicTimingControls()
-                                .frame(width: width, height: 90)
-                                .transition(.opacity)
+                            VStack(spacing: 0) {
+                                MusicTimingControls()
+                                    .frame(width: width, height: 90)
+                                // iOS 6 showed the song's lyrics over the artwork
+                                // together with the scrubber.
+                                if !lyrics.isEmpty {
+                                    MusicLyricsView(lyrics: lyrics)
+                                        .frame(width: width, height: max(artHeight - 90, 0))
+                                }
+                            }
+                            .transition(.opacity)
                         }
                     }
                     .frame(width: width, height: available, alignment: .top)
@@ -123,6 +132,7 @@ struct MusicNowPlayingView: View {
     private func reload(tracks: Bool) {
         let item = player.nowPlayingItem
         artwork = item?.oldMusicArtwork(600) ?? UIImage(named: "noartplaceholder") ?? UIImage()
+        lyrics = item?.lyrics?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if tracks {
             let newTracks = MusicLibrary.albumTracks(for: item)
             if newTracks.map(\.persistentID) != albumTracks.map(\.persistentID) {
@@ -209,7 +219,7 @@ struct MusicNowPlayingBar: View {
                     Text(player.nowPlayingItem?.albumTitle ?? "")
                         .foregroundColor(.oldOS(159, 159, 159))
                 }
-                .font(OldMusicFont.bold(13))
+                .font(OldOSFont.bold(13))
                 .shadow(color: Color.black.opacity(0.8), radius: 0, x: 0, y: -1)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
@@ -254,7 +264,7 @@ struct MusicNowPlayingBar: View {
                 Color.black.frame(height: topInset)
                 LinearGradient(oldOS: OldMusicBlackChrome.barGradient)
                     .frame(height: 60)
-                    .oldOSInnerShadowTop(color: .oldOS(230, 230, 230), radius: 0.025)
+                    .oldOSInnerShadowBottom(color: .oldOS(230, 230, 230), radius: 0.025)
             }
         )
         .oldOSBorder(width: 1, edges: [.bottom], color: OldMusicBlackChrome.hairline)
@@ -265,7 +275,9 @@ struct MusicNowPlayingBar: View {
 
 /// OldOS `now_playing_timing_controls`: scrubber, repeat, Genius atom, shuffle.
 struct MusicTimingControls: View {
+    @EnvironmentObject private var library: MusicLibrary
     @ObservedObject private var player = MusicPlayer.shared
+    @State private var geniusFailed = false
     @State private var position: Double = 0
     @State private var scrubbing = false
     @State private var elapsed: Double = 0
@@ -276,13 +288,13 @@ struct MusicTimingControls: View {
     var body: some View {
         ZStack {
             Color.black.opacity(0.5)
-                .oldOSInnerShadowBottom(color: Color.white.opacity(0.6), radius: 0.0275)
+                .oldOSInnerShadowBottomView(color: Color.white.opacity(0.6), radius: 0.0275)
                 .oldOSBorder(width: 1, edges: [.bottom], color: .black)
 
             VStack {
                 HStack {
                     Text(oldMusicFormatTime(elapsed))
-                        .font(OldMusicFont.bold(14))
+                        .font(OldOSFont.bold(14))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .shadow(color: Color.black.opacity(0.21), radius: 0, x: 0, y: -1)
@@ -306,7 +318,7 @@ struct MusicTimingControls: View {
                     .frame(height: 20)
 
                     Text("-\(oldMusicFormatTime(max(0, duration - elapsed)))")
-                        .font(OldMusicFont.bold(14))
+                        .font(OldOSFont.bold(14))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .shadow(color: Color.black.opacity(0.75), radius: 0, x: 0, y: -1)
@@ -314,16 +326,38 @@ struct MusicTimingControls: View {
                 }
 
                 HStack {
-                    Button {
-                        player.cycleRepeat()
-                    } label: {
-                        Image(repeatImage)
+                    if player.supportsSpeed {
+                        // iOS 6 podcasts / audiobooks: speed instead of repeat.
+                        Button {
+                            OldMusicHaptics.tap()
+                            player.cycleSpeed()
+                        } label: {
+                            MusicSpeedBadge(rate: player.playbackRate)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, 16)
+                    } else {
+                        Button {
+                            OldMusicHaptics.tap()
+                            player.cycleRepeat()
+                        } label: {
+                            Image(repeatImage)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, 20)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.leading, 20)
 
                     Spacer()
-                    Image("nowplaying_atom")
+                    Button {
+                        OldMusicHaptics.press()
+                        geniusFailed = !player.playGenius(from: library.songs)
+                        if geniusFailed {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { geniusFailed = false }
+                        }
+                    } label: {
+                        Image(geniusFailed ? "nowplaying_atom_pressed" : "nowplaying_atom")
+                    }
+                    .buttonStyle(MusicPressedImageStyle(pressedImage: "nowplaying_atom_pressed"))
                     Spacer()
 
                     Button {
@@ -339,6 +373,7 @@ struct MusicTimingControls: View {
         .onAppear(perform: refresh)
         .onReceive(timer) { _ in
             if !scrubbing { refresh() }
+            player.applyRateIfNeeded()
         }
     }
 
@@ -429,7 +464,7 @@ struct MusicDarkTrackRow: View {
             HStack {
                 HStack {
                     Text("\(track.albumTrackNumber == 0 ? index + 1 : track.albumTrackNumber).")
-                        .font(OldMusicFont.bold(14))
+                        .font(OldOSFont.bold(14))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .padding(.horizontal, 5)
@@ -437,7 +472,7 @@ struct MusicDarkTrackRow: View {
                 }
                 .frame(width: 60)
                 Text(track.title ?? "---")
-                    .font(OldMusicFont.bold(14))
+                    .font(OldOSFont.bold(14))
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .padding(.leading, 14)
@@ -445,7 +480,7 @@ struct MusicDarkTrackRow: View {
                 HStack {
                     Spacer()
                     Text(oldMusicFormatTime(track.playbackDuration))
-                        .font(OldMusicFont.bold(14))
+                        .font(OldOSFont.bold(14))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .padding(.horizontal, 5)
@@ -561,10 +596,75 @@ struct MusicNowPlayingFooter: View {
                     Color.oldOS(16, 15, 15).opacity(0.875)
                 ])
                 .frame(height: 55)
-                .oldOSInnerShadowTop(color: Color.white.opacity(0.6), radius: 0.05)
+                .oldOSInnerShadowBottom(color: Color.white.opacity(0.6), radius: 0.05)
                 Color.oldOS(7.5, 7.5, 7.5).opacity(0.97)
             }
         )
         .oldOSBorder(width: 1, edges: [.top], color: .black)
+    }
+}
+
+// MARK: - Lyrics, speed, pressed artwork
+
+/// Lyrics panel shown under the scrubber (iOS 6 Now Playing).
+struct MusicLyricsView: View {
+    let lyrics: String
+
+    var body: some View {
+        ScrollView(showsIndicators: true) {
+            Text(lyrics)
+                .font(OldOSFont.bold(15))
+                .foregroundColor(.white)
+                .shadow(color: Color.black.opacity(0.8), radius: 0, x: 0, y: -1)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+        }
+        .background(Color.black.opacity(0.62))
+    }
+}
+
+/// The iOS 6 "1×" speed pill for spoken content.
+struct MusicSpeedBadge: View {
+    let rate: Float
+
+    private var label: String {
+        switch rate {
+        case 2: return "2×"
+        case 0.5: return "½×"
+        default: return "1×"
+        }
+    }
+
+    var body: some View {
+        Text(label)
+            .font(OldOSFont.bold(14))
+            .foregroundColor(.white)
+            .shadow(color: Color.black.opacity(0.75), radius: 0, x: 0, y: -1)
+            .frame(width: 40, height: 24)
+            .oldOSInnerShadowBackground(
+                RoundedRectangle(cornerRadius: 5.5),
+                oldOSButtonGradient(.black),
+                radius: 0.8,
+                offset: CGPoint(x: 0, y: 0.6),
+                intensity: 0.7
+            )
+            .overlay(RoundedRectangle(cornerRadius: 5.5).stroke(Color.white.opacity(0.25), lineWidth: 0.5))
+    }
+}
+
+/// Swaps an artwork button to its "_pressed" asset while touched (OldOS atom).
+struct MusicPressedImageStyle: ButtonStyle {
+    let pressedImage: String
+
+    func makeBody(configuration: Configuration) -> some View {
+        ZStack {
+            configuration.label.opacity(configuration.isPressed ? 0 : 1)
+            if configuration.isPressed {
+                Image(pressedImage)
+            }
+        }
     }
 }

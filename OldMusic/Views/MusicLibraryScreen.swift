@@ -66,6 +66,8 @@ struct MusicLibraryScreen: View {
             MusicCollectionsView(title: title, collections: collections, kind: kind)
         case .some(.items(let title, let items)):
             MusicItemsView(title: title, items: items)
+        case .some(.aspect):
+            MusicAspectView()
         }
     }
 
@@ -100,9 +102,9 @@ struct MusicNavigationBar: View {
                 HStack {
                     Spacer()
                     Text(navigator.title)
-                        .font(OldMusicFont.bold(22))
-                        .foregroundColor(theme.barTitle)
-                        .shadow(color: theme.barTitleShadow, radius: 0, x: 0, y: -1)
+                        .font(OldOSFont.bold(22))
+                        .foregroundColor(theme.titleBarTitle)
+                        .shadow(color: theme.titleBarTitleShadow, radius: 0, x: 0, y: -1)
                         .lineLimit(1)
                         .frame(maxWidth: 180)
                         .id(navigator.title)
@@ -147,7 +149,7 @@ struct MusicNavigationBar: View {
                                     Text("Now")
                                     Text("Playing")
                                 }
-                                .font(OldMusicFont.bold(11))
+                                .font(OldOSFont.bold(11))
                                 .foregroundColor(.white)
                                 .shadow(color: Color.black.opacity(0.6), radius: 0, x: 0, y: -1)
                                 .multilineTextAlignment(.center)
@@ -167,7 +169,7 @@ struct MusicNavigationBar: View {
                     .frame(height: topInset)
                 LinearGradient(oldOS: theme.barGradient)
                     .frame(height: barHeight)
-                    .oldOSInnerShadowTop(color: theme.barHighlight, radius: 0.025)
+                    .oldOSInnerShadowBottom(color: theme.barHighlight, radius: 0.025)
             }
         )
         .oldOSBorder(width: 1, edges: [.bottom], color: theme.barHairline)
@@ -191,7 +193,7 @@ struct MusicBarBackButton: View {
                     .saturation(theme.barButtonSaturation)
                     .brightness(theme.barButtonBrightness)
                 Text(title)
-                    .font(OldMusicFont.bold(13))
+                    .font(OldOSFont.bold(13))
                     .foregroundColor(.white)
                     .shadow(color: Color.black.opacity(0.45), radius: 0, x: 0, y: -0.6)
                     .lineLimit(1)
@@ -273,7 +275,7 @@ struct MusicTabButton: View {
                                 .shadow(color: Color.black.opacity(0.6), radius: 2.5, x: 0, y: 2.5)
                         }
                         Text(tab.title)
-                            .font(OldMusicFont.bold(11))
+                            .font(OldOSFont.bold(11))
                             .foregroundColor(.white)
                     }
                 } else {
@@ -283,7 +285,7 @@ struct MusicTabButton: View {
                             .mask(glyph(width: tab.iconWidth, height: 30))
                             .shadow(color: Color.black.opacity(0.75), radius: 0, x: 0, y: -1)
                         Text(tab.title)
-                            .font(OldMusicFont.bold(11))
+                            .font(OldOSFont.bold(11))
                             .foregroundColor(.oldOS(168, 168, 168))
                     }
                 }

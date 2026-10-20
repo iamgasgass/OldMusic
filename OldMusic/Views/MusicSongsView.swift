@@ -21,11 +21,14 @@ struct MusicSongsView: View {
                 Section {
                     ForEach(section.items, id: \.persistentID) { song in
                         Button {
-                            MusicPlayer.shared.play(library.songs, startingAt: song)
-                            navigator.showNowPlaying()
+                            navigator.tap {
+                                MusicPlayer.shared.play(library.songs, startingAt: song)
+                                navigator.showNowPlaying()
+                            }
                         } label: {
                             MusicSongRow(song: song, isPlaying: player.isNowPlaying(song))
                         }
+                        .musicSongActions(song, in: library.songs)
                         .musicRow()
                     }
                 } header: {
@@ -61,11 +64,14 @@ struct MusicItemsView: View {
 
                 ForEach(Array(items.enumerated()), id: \.offset) { _, song in
                     Button {
-                        MusicPlayer.shared.play(items, startingAt: song)
-                        navigator.showNowPlaying()
+                        navigator.tap {
+                            MusicPlayer.shared.play(items, startingAt: song)
+                            navigator.showNowPlaying()
+                        }
                     } label: {
                         MusicSongRow(song: song, isPlaying: player.isNowPlaying(song))
                     }
+                    .musicSongActions(song, in: items)
                     .musicRow()
                 }
             }

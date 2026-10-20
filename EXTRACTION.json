@@ -15,7 +15,9 @@
   "deployment_target": "iOS 16.0+",
   "project_generation": "XcodeGen (project.yml)",
   "third_party_swift_dependencies": [],
-  "vendored_objective_c": ["iCarousel (Nick Lockwood, zlib) — Cover Flow"],
+  "vendored_objective_c": [
+    "iCarousel (Nick Lockwood, zlib) — Cover Flow"
+  ],
   "private_apis": false,
   "rebuild_notes": {
     "status": "Rebuilt as a multi-file SwiftUI app (Models / Store / Views / Support) preserving the OldOS iPod visual language.",
@@ -34,7 +36,10 @@
       "Views/MusicNowPlayingView.swift (artwork/reflection, flip track list, scrubber, controls, volume)",
       "Views/MusicCoverFlowView.swift",
       "Views/MusicListComponents.swift",
-      "Support/OldMusicKit.swift (PureSwiftUI replacements), OldMusicPalette.swift (Light / Dark skins), OldMusicSlider.swift"
+      "Support/OldOSKit.swift (verbatim from OldSafari), OldOSKit+Music.swift, OldMusicPalette.swift, OldMusicSlider.swift",
+      "Store/MusicSettings.swift (Aspect UI, Shake to Shuffle)",
+      "Views/MusicAspectView.swift",
+      "Views/MusicActionSheet.swift (OldSafari action sheet + share sheet)"
     ],
     "removed_dependencies": [
       "PureSwiftUI / PureSwiftUITools (replaced by Support/OldMusicKit.swift)",
@@ -57,6 +62,19 @@
       "Cover Flow could crash with an empty library or a nil current item view.",
       "Referenced images 'CoverFlowPlayIndicator' / 'CoverFlowInfoIcon' did not exist; drawn natively.",
       "MPMediaType.anyITunesU does not exist; iTunes U uses MPMediaType.audioITunesU."
+    ],
+    "features_added_beyond_original_extraction": [
+      "Aspect UI in More (Sistema / Chiaro / Scuro), persisted, applied to the window",
+      "Dark skin identical to OldSafari Private Browsing palette (OldOSSafariTheme values)",
+      "OldOSKit.swift and the iOS 6 action sheet shared verbatim with OldSafari",
+      "Smart playlists: Recently Added, Recently Played, Top 25 Most Played",
+      "Long-press song action sheet: Play Next, Add to Up Next, Go to Album, Go to Artist, Share Song",
+      "Genius mix from the Now Playing atom button",
+      "Playback speed (1x/2x/0.5x) for podcasts, audiobooks, iTunes U",
+      "Lyrics over the Now Playing artwork",
+      "Shake to Shuffle with the OldOS iOS 6 switch",
+      "All Songs row for artists, remembered last tab, haptics",
+      "Full library browsing in More (albums, genres, composers, audiobooks, podcasts, iTunes U) and Videos"
     ]
   }
 }

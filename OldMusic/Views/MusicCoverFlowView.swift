@@ -22,7 +22,7 @@ struct MusicCoverFlowView: View {
 
                 if library.albums.isEmpty {
                     Text("No Albums")
-                        .font(OldMusicFont.bold(20))
+                        .font(OldOSFont.bold(20))
                         .foregroundColor(.oldOS(159, 159, 159))
                         .frame(width: canvas.width, height: canvas.height)
                 } else {
@@ -52,7 +52,7 @@ struct MusicCoverFlowView: View {
                             Text(currentAlbum.representativeItem?.albumArtist ?? currentAlbum.representativeItem?.artist ?? "Unknown")
                             Text(currentAlbum.representativeItem?.albumTitle ?? "Unknown")
                         }
-                        .font(OldMusicFont.bold(15))
+                        .font(OldOSFont.bold(15))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         .lineLimit(1)
@@ -139,9 +139,9 @@ struct MusicCoverFlowAlbumBack: View {
                         HStack(spacing: 0) {
                             VStack(alignment: .leading) {
                                 Text(album.representativeItem?.albumArtist ?? album.representativeItem?.artist ?? "Unknown")
-                                    .font(OldMusicFont.bold(13))
+                                    .font(OldOSFont.bold(13))
                                 Text(album.representativeItem?.albumTitle ?? "Unknown")
-                                    .font(OldMusicFont.bold(20))
+                                    .font(OldOSFont.bold(20))
                             }
                             .foregroundColor(.white)
                             .lineLimit(1)
@@ -196,7 +196,7 @@ struct MusicCoverFlowItem: View {
             Image(uiImage: image)
                 .resizable()
                 .frame(width: 250, height: 250)
-                .oldOSInnerShadowTop(color: Color.black.opacity(0.9), radius: 0.0125, offset: 250)
+                .oldOSInnerShadowBottomWithOffset(color: Color.black.opacity(0.9), radius: 0.0125, offset: 250)
         }
         .frame(height: 250)
     }

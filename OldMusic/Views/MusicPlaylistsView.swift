@@ -8,6 +8,11 @@ struct MusicPlaylistsView: View {
 
     var body: some View {
         MusicSearchableList {
+            // iOS 6 smart playlists, generated from play counts and dates.
+            smartRow("Recently Added", items: library.recentlyAdded)
+            smartRow("Recently Played", items: library.recentlyPlayed)
+            smartRow("Top 25 Most Played", items: library.topPlayed)
+
             ForEach(library.playlists, id: \.persistentID) { playlist in
                 Button {
                     guard playlist.count != 0 else { return }
@@ -18,6 +23,43 @@ struct MusicPlaylistsView: View {
                 .musicRow()
             }
         }
+    }
+
+    private func smartRow(_ title: String, items: [MPMediaItem]) -> some View {
+        Button {
+            navigator.push(.items(title: title, items: items))
+        } label: {
+            MusicSmartPlaylistRow(title: title)
+        }
+        .musicRow()
+    }
+}
+
+/// Smart playlist row: the iOS 6 gear in front of the name.
+struct MusicSmartPlaylistRow: View {
+    @Environment(\.oldMusicTheme) private var theme
+    let title: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 0)
+            HStack(spacing: 7) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.isDark ? .oldOS(150, 150, 154) : .oldOS(120, 128, 140))
+                    .padding(.leading, 11)
+                Text(title)
+                    .font(OldOSFont.bold(18))
+                    .foregroundColor(theme.listRowText)
+                    .lineLimit(1)
+                Spacer()
+                Image("UITableNext").padding(.trailing, 12)
+            }
+            Spacer(minLength: 0)
+            MusicSeparator()
+        }
+        .frame(height: 44)
+        .contentShape(Rectangle())
     }
 }
 
@@ -43,11 +85,14 @@ struct MusicPlaylistDetailView: View {
 
             ForEach(Array(songs.enumerated()), id: \.offset) { _, song in
                 Button {
-                    MusicPlayer.shared.play(songs, startingAt: song)
-                    navigator.showNowPlaying()
+                    navigator.tap {
+                        MusicPlayer.shared.play(songs, startingAt: song)
+                        navigator.showNowPlaying()
+                    }
                 } label: {
                     MusicSongRow(song: song, isPlaying: player.isNowPlaying(song))
                 }
+                .musicSongActions(song, in: songs)
                 .musicRow()
             }
         }
@@ -74,7 +119,7 @@ struct MusicPlaylistDetailView: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(LinearGradient(oldOS: theme.editButtonGradient))
             Text(title)
-                .font(OldMusicFont.bold(18))
+                .font(OldOSFont.bold(18))
                 .foregroundColor(theme.editButtonText)
                 .shadow(color: theme.editButtonTextShadow, radius: 0, x: 0, y: theme.editButtonTextShadowY)
         }

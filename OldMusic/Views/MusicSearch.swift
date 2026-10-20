@@ -40,7 +40,7 @@ struct MusicSearchBar: View {
                         .submitLabel(.search)
                         .autocorrectionDisabled(true)
                         .textInputAutocapitalization(.never)
-                        .foregroundColor(theme.searchFieldText)
+                        .foregroundColor(theme.fieldTextActive)
                         .onSubmit { focused = false }
 
                     if !text.isEmpty {
@@ -56,9 +56,9 @@ struct MusicSearchBar: View {
                 .padding(.vertical, 5)
                 .padding(.trailing, 8)
                 .background(
-                    OldMusicInnerShadow(
+                    OldOSInnerShadow(
                         shape: Capsule(),
-                        fill: theme.searchFieldFill,
+                        fill: theme.fieldFill,
                         radius: 1.6,
                         offset: CGPoint(x: 0, y: 1),
                         intensity: 0.7
@@ -71,14 +71,14 @@ struct MusicSearchBar: View {
                 if state != .idle {
                     Button(action: cancel) {
                         Text("Cancel")
-                            .font(OldMusicFont.bold(13.25))
+                            .font(OldOSFont.bold(13.25))
                             .foregroundColor(.white)
                             .shadow(color: Color.black.opacity(0.75), radius: 1, x: 0, y: -0.25)
                             .frame(width: 59, height: 32)
                             .background(
-                                OldMusicInnerShadow(
+                                OldOSInnerShadow(
                                     shape: RoundedRectangle(cornerRadius: 5.5),
-                                    fill: LinearGradient(oldOS: theme.searchCancelGradient),
+                                    fill: oldOSButtonGradient(theme.neutralButton),
                                     radius: 0.8,
                                     offset: CGPoint(x: 0, y: 0.6),
                                     intensity: 0.7
@@ -114,7 +114,7 @@ struct MusicSearchBar: View {
     private func cancel() {
         text = ""
         focused = false
-        oldMusicResignKeyboard()
+        oldOSHideKeyboard()
         withAnimation(.easeOut(duration: 0.2)) {
             state = .idle
         }
@@ -158,10 +158,10 @@ struct MusicSearchOverlay: View {
         case .idle:
             EmptyView()
         case .activeEmpty:
-            theme.searchScrim
+            theme.scrim
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    oldMusicResignKeyboard()
+                    oldOSHideKeyboard()
                     withAnimation(.easeOut(duration: 0.2)) { state = .idle }
                 }
                 .padding(.top, 44)
@@ -229,8 +229,10 @@ struct MusicSearchResults: View {
                 Section {
                     ForEach(songs, id: \.persistentID) { song in
                         Button {
-                            MusicPlayer.shared.play(songs, startingAt: song)
-                            navigator.showNowPlaying()
+                            navigator.tap {
+                                MusicPlayer.shared.play(songs, startingAt: song)
+                                navigator.showNowPlaying()
+                            }
                         } label: {
                             MusicArtworkRow(
                                 image: song.oldMusicArtwork(120),
@@ -238,6 +240,7 @@ struct MusicSearchResults: View {
                                 subtitle: "\(song.albumTitle ?? "---") - \(song.artist ?? "---")"
                             )
                         }
+                        .musicSongActions(song, in: songs)
                         .musicRow(minHeight: 60)
                     }
                 } header: {

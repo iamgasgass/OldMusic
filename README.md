@@ -16,7 +16,14 @@ It is not a skin over the Music app. OldMusic is a SwiftUI application that read
 ## Highlights
 
 - iOS 6 iPod interface rebuilt for a modern full-screen layout: bars extend behind the status bar, notch / Dynamic Island and the home indicator.
-- **Light and Dark Mode**: the classic blue-grey skin in Light Mode, an iOS 6 graphite skin in Dark Mode (bars, search, lists, headers, album pages, buttons). Now Playing, the tab bar and Cover Flow keep their original black chrome. The status bar style follows the visible screen.
+- **Aspect UI** (More › Settings): *Sistema*, *Chiaro* or *Scuro*, saved across launches. The Dark skin is OldSafari's graphite palette value for value (`Support/OldMusicPalette.swift` shares OldSafari's `OldOSSafariTheme` block); the choice is applied to the window, so keyboard, share sheet and status bar switch together. Now Playing, the tab bar and Cover Flow keep their original black chrome.
+- **Smart playlists** at the top of Playlists: Recently Added, Recently Played, Top 25 Most Played (with the iOS 6 gear).
+- **Long press on any song** opens the OldSafari / iOS 6 action sheet: Play Next, Add to Up Next, Go to Album, Go to Artist, Share Song.
+- **Genius** (the atom button in Now Playing) builds a mix of up to 25 songs of the same genre / artist around the current song without interrupting it.
+- **Speed button** (1× / 2× / ½×) replaces Repeat for podcasts, audiobooks and iTunes U, as on iOS 6.
+- **Lyrics** appear over the artwork together with the scrubber when the song has them.
+- **Shake to Shuffle** with the OldOS iOS 6 switch (More › Settings), on by default like iOS 6.
+- **All Songs** row on artists with more than one album; the last selected tab is remembered; haptic feedback on controls.
 - Playlists, Artists, Songs, Videos and More (Albums, Audiobooks, Composers, Genres, iTunes U, Podcasts), all navigable with the iOS 6 push / pop slides.
 - Search in every list with Artists, Albums and Songs results.
 - A–Z index bar using the same sections as the Music app; letters with no entries jump to the next section.
@@ -37,7 +44,7 @@ OldMusic/
 │   ├── Models/                       # MusicRoute (tabs, pushed screens), MusicSection (A–Z)
 │   ├── Store/                        # MusicLibrary, MusicPlayer, MusicNavigator, MusicVolume
 │   ├── Views/                        # Root, library shell, lists, search, Now Playing, Cover Flow
-│   ├── Support/                      # OldMusicKit (drawing helpers), palette (Light / Dark), slider
+│   ├── Support/                      # OldOSKit (shared with OldSafari) + iPod additions, palette, slider
 │   ├── Vendor/iCarousel/             # Objective-C Cover Flow carousel
 │   ├── Assets.xcassets/              # OldOS iPod artwork and app icon (Any / Dark / Tinted)
 │   └── Info.plist

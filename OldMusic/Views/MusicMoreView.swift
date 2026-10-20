@@ -22,36 +22,89 @@ struct MusicMoreView: View {
         Entry(title: "Podcasts", icon: "BarPodcasts")
     ]
 
+    @ObservedObject private var settings = MusicSettings.shared
+
     var body: some View {
         List {
             ForEach(entries, id: \.title) { entry in
                 Button {
                     open(entry.title)
                 } label: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        HStack(alignment: .center) {
-                            Image(entry.icon)
-                                .frame(width: 25, height: 44 - 0.95)
-                                .opacity(theme.isDark ? 0.9 : 1)
-                            Text(entry.title)
-                                .font(OldMusicFont.bold(18))
-                                .foregroundColor(theme.rowText)
-                                .lineLimit(1)
-                                .padding(.leading, 6)
-                                .padding(.trailing, 40)
-                            Spacer()
-                            Image("UITableNext").padding(.trailing, 12)
-                        }
-                        .padding(.leading, 16)
-                        MusicSeparator()
+                    moreRow(title: entry.title, detail: nil) {
+                        Image(entry.icon)
+                            .opacity(theme.isDark ? 0.9 : 1)
                     }
-                    .frame(height: 44)
-                    .contentShape(Rectangle())
                 }
                 .musicRow()
             }
+
+            MusicSectionHeader(text: "Settings")
+                .musicRow(minHeight: 23)
+
+            // Aspect UI: Sistema / Chiaro / Scuro.
+            Button {
+                navigator.push(.aspect)
+            } label: {
+                moreRow(title: "Aspect UI", detail: settings.appearance.title) {
+                    Image(systemName: "circle.lefthalf.filled")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundColor(.oldOS(126, 131, 140))
+                }
+            }
+            .musicRow()
+
+            // iOS 6 Settings › Music › Shake to Shuffle.
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .center) {
+                    Image(systemName: "shuffle")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.oldOS(126, 131, 140))
+                        .frame(width: 25, height: 44 - 0.95)
+                    Text("Shake to Shuffle")
+                        .font(OldOSFont.bold(18))
+                        .foregroundColor(theme.listRowText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .padding(.leading, 6)
+                    Spacer(minLength: 8)
+                    OldOSToggle(isOn: $settings.shakeToShuffle)
+                        .scaleEffect(0.85)
+                        .frame(width: 90, height: 30)
+                        .padding(.trailing, 10)
+                }
+                .padding(.leading, 16)
+                MusicSeparator()
+            }
+            .frame(height: 50)
+            .musicRow(minHeight: 50)
         }
         .musicListStyle()
+    }
+
+    private func moreRow<Icon: View>(title: String, detail: String?, @ViewBuilder icon: () -> Icon) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center) {
+                icon()
+                    .frame(width: 25, height: 44 - 0.95)
+                Text(title)
+                    .font(OldOSFont.bold(18))
+                    .foregroundColor(theme.listRowText)
+                    .lineLimit(1)
+                    .padding(.leading, 6)
+                Spacer()
+                if let detail {
+                    Text(detail)
+                        .font(OldOSFont.regular(17))
+                        .foregroundColor(theme.cardFieldText)
+                        .lineLimit(1)
+                }
+                Image("UITableNext").padding(.trailing, 12)
+            }
+            .padding(.leading, 16)
+            MusicSeparator()
+        }
+        .frame(height: 44)
+        .contentShape(Rectangle())
     }
 
     private func open(_ title: String) {

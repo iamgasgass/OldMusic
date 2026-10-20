@@ -43,6 +43,20 @@ struct MusicArtistAlbumsView: View {
 
     var body: some View {
         MusicSearchableList {
+            if albums.count > 1 {
+                // iOS 6 "All Songs" row: every album of the artist, in album order.
+                Button {
+                    navigator.push(.items(title: "All Songs", items: albums.flatMap { MusicLibrary.sortedTracks($0.items) }))
+                } label: {
+                    MusicArtworkRow(
+                        image: albums.first?.oldMusicArtwork(120) ?? UIImage(),
+                        title: "All Songs",
+                        subtitle: "\(albums.reduce(0) { $0 + $1.count }) Songs"
+                    )
+                }
+                .musicRow(minHeight: 60)
+            }
+
             ForEach(albums, id: \.persistentID) { album in
                 Button {
                     navigator.push(.album(album))
@@ -77,12 +91,15 @@ struct MusicAlbumView: View {
 
                 ForEach(Array(tracks.enumerated()), id: \.element.persistentID) { index, track in
                     Button {
-                        MusicPlayer.shared.play(tracks, startingAt: track)
-                        navigator.showNowPlaying()
+                        navigator.tap {
+                            MusicPlayer.shared.play(tracks, startingAt: track)
+                            navigator.showNowPlaying()
+                        }
                     } label: {
                         trackRow(track, index: index)
                     }
                     .buttonStyle(.plain)
+                    .musicSongActions(track, in: tracks)
                     .frame(height: 44)
                 }
             }
@@ -109,21 +126,21 @@ struct MusicAlbumView: View {
 
             VStack(alignment: .leading) {
                 Text(album.representativeItem?.albumArtist ?? album.representativeItem?.artist ?? "")
-                    .font(OldMusicFont.bold(16))
+                    .font(OldOSFont.bold(16))
                     .foregroundColor(theme.albumHeaderTitle)
                     .lineLimit(1)
                 Text(album.representativeItem?.albumTitle ?? "")
-                    .font(OldMusicFont.bold(20))
+                    .font(OldOSFont.bold(20))
                     .foregroundColor(theme.albumHeaderTitle)
                     .lineLimit(1)
                 if let year = releaseYear {
                     Text("Released \(year)")
-                        .font(OldMusicFont.bold(10))
+                        .font(OldOSFont.bold(10))
                         .foregroundColor(theme.albumHeaderDetail)
                         .lineLimit(1)
                 }
                 Text("\(count) \(count == 1 ? "Song" : "Songs"), \(oldMusicFormatMinutes(totalTime)) Mins.")
-                    .font(OldMusicFont.bold(10))
+                    .font(OldOSFont.bold(10))
                     .foregroundColor(theme.albumHeaderDetail)
                     .lineLimit(1)
                 Spacer()
@@ -145,15 +162,15 @@ struct MusicAlbumView: View {
                 HStack {
                     Spacer()
                     Text(String(track.albumTrackNumber == 0 ? index + 1 : track.albumTrackNumber))
-                        .font(OldMusicFont.bold(16))
-                        .foregroundColor(theme.albumTrackText)
+                        .font(OldOSFont.bold(16))
+                        .foregroundColor(theme.listRowText)
                         .lineLimit(1)
                     Spacer()
                 }
                 .frame(width: 40)
                 Text(track.title ?? "---")
-                    .font(OldMusicFont.bold(16))
-                    .foregroundColor(theme.albumTrackText)
+                    .font(OldOSFont.bold(16))
+                    .foregroundColor(theme.listRowText)
                     .lineLimit(1)
                     .padding(.leading, 14)
                 Spacer()
@@ -161,7 +178,7 @@ struct MusicAlbumView: View {
                     Image("NowPlayingListItemIcon").padding(.trailing, 5)
                 }
                 Text(oldMusicFormatTime(track.playbackDuration))
-                    .font(OldMusicFont.bold(15))
+                    .font(OldOSFont.bold(15))
                     .foregroundColor(theme.albumTrackDuration)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)

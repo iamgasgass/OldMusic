@@ -21,6 +21,11 @@ final class MusicLibrary: ObservableObject {
     @Published private(set) var iTunesU: [MPMediaItemCollection] = []
     @Published private(set) var videos: [MPMediaItem] = []
 
+    // iOS 6 smart playlists (shown with the gear at the top of Playlists).
+    @Published private(set) var recentlyAdded: [MPMediaItem] = []
+    @Published private(set) var recentlyPlayed: [MPMediaItem] = []
+    @Published private(set) var topPlayed: [MPMediaItem] = []
+
     private var libraryObserver: NSObjectProtocol?
     private var pendingReload: DispatchWorkItem?
     private let queue = DispatchQueue(label: "com.iamgasgass.oldmusic.library", qos: .userInitiated)
@@ -116,8 +121,27 @@ final class MusicLibrary: ObservableObject {
             ])
             let videos = videoQuery.items ?? []
 
+            // Smart playlists, same rules as iTunes / iOS 6.
+            let twoWeeksAgo = Date().addingTimeInterval(-14 * 24 * 3600)
+            let byDateAdded = songs.sorted { $0.dateAdded > $1.dateAdded }
+            let addedRecently = byDateAdded.filter { $0.dateAdded >= twoWeeksAgo }
+            let recentlyAdded = addedRecently.isEmpty ? Array(byDateAdded.prefix(25)) : addedRecently
+            let recentlyPlayed = Array(
+                songs.filter { $0.lastPlayedDate != nil }
+                    .sorted { ($0.lastPlayedDate ?? .distantPast) > ($1.lastPlayedDate ?? .distantPast) }
+                    .prefix(25)
+            )
+            let topPlayed = Array(
+                songs.filter { $0.playCount > 0 }
+                    .sorted { $0.playCount > $1.playCount }
+                    .prefix(25)
+            )
+
             DispatchQueue.main.async {
                 guard let self else { return }
+                self.recentlyAdded = recentlyAdded
+                self.recentlyPlayed = recentlyPlayed
+                self.topPlayed = topPlayed
                 self.albums = albums
                 self.playlists = playlists
                 self.artists = artists

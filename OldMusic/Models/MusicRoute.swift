@@ -47,6 +47,8 @@ enum MusicRoute {
     case album(MPMediaItemCollection)
     case collections(title: String, collections: [MPMediaItemCollection], kind: MusicCollectionKind)
     case items(title: String, items: [MPMediaItem])
+    /// More › Aspect UI (Sistema / Chiaro / Scuro).
+    case aspect
 
     var title: String {
         switch self {
@@ -60,8 +62,16 @@ enum MusicRoute {
             return title
         case .items(let title, _):
             return title
+        case .aspect:
+            return "Aspect UI"
         }
     }
+}
+
+/// What the system share sheet receives for "Share Song".
+struct MusicShareContent: Identifiable {
+    let id = UUID()
+    let items: [Any]
 }
 
 // MARK: - Display names

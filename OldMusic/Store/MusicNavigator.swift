@@ -18,12 +18,24 @@ final class MusicNavigator: ObservableObject {
     @Published private(set) var movingForward = true
     @Published private(set) var coverFlowOrientation: UIDeviceOrientation = .landscapeLeft
 
+    /// Song whose iOS 6 action sheet is open (long press on a song row).
+    @Published var actionSong: MPMediaItem?
+    /// The list the long-pressed song belongs to (used by "Play").
+    private(set) var actionList: [MPMediaItem] = []
+    /// Content handed to the system share sheet.
+    @Published var shareContent: MusicShareContent?
+
     private var screenBeforeCoverFlow: Screen = .library
     private var orientationObserver: NSObjectProtocol?
+    private var suppressNextTap = false
 
     static let pushAnimation = Animation.linear(duration: 0.28)
+    private static let lastTabKey = "OldMusic.LastTab"
 
     init() {
+        if let saved = UserDefaults.standard.string(forKey: Self.lastTabKey), let savedTab = MusicTab(rawValue: saved) {
+            tab = savedTab
+        }
         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
         orientationObserver = NotificationCenter.default.addObserver(
             forName: UIDevice.orientationDidChangeNotification, object: nil, queue: .main
@@ -70,7 +82,7 @@ final class MusicNavigator: ObservableObject {
 
     func pop() {
         guard depth > 0 else { return }
-        oldMusicResignKeyboard()
+        oldOSHideKeyboard()
         movingForward = false
         let tab = self.tab
         DispatchQueue.main.async { [weak self] in
@@ -83,20 +95,53 @@ final class MusicNavigator: ObservableObject {
 
     /// Tapping a tab always shows its root list (also when it is already selected).
     func select(_ newTab: MusicTab) {
-        oldMusicResignKeyboard()
+        oldOSHideKeyboard()
         stacks = [:]
         tab = newTab
+        UserDefaults.standard.set(newTab.rawValue, forKey: Self.lastTabKey)
+    }
+
+    // MARK: Song actions (long press)
+
+    /// Opens the iOS 6 action sheet for `song`; the tap that ends the long
+    /// press is swallowed so the song does not also start playing.
+    func presentActions(for song: MPMediaItem, in list: [MPMediaItem]) {
+        oldOSHideKeyboard()
+        suppressNextTap = true
+        actionList = list
+        withAnimation(.linear(duration: 0.25)) {
+            actionSong = song
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            self?.suppressNextTap = false
+        }
+    }
+
+    func dismissActions() {
+        withAnimation(.linear(duration: 0.2)) {
+            actionSong = nil
+        }
+    }
+
+    /// Runs a row tap unless it is the release of a long press.
+    func tap(_ action: () -> Void) {
+        if suppressNextTap {
+            suppressNextTap = false
+            return
+        }
+        action()
     }
 
     /// Jumps to another tab with a prepared stack (search results → artist / album).
     func open(tab newTab: MusicTab, stack newStack: [MusicRoute]) {
-        oldMusicResignKeyboard()
+        oldOSHideKeyboard()
         movingForward = true
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             withAnimation(Self.pushAnimation) {
                 self.stacks = [newTab: newStack]
                 self.tab = newTab
+                UserDefaults.standard.set(newTab.rawValue, forKey: Self.lastTabKey)
             }
         }
     }
@@ -104,7 +149,7 @@ final class MusicNavigator: ObservableObject {
     // MARK: Screens
 
     func showNowPlaying() {
-        oldMusicResignKeyboard()
+        oldOSHideKeyboard()
         guard screen != .nowPlaying else { return }
         movingForward = true
         DispatchQueue.main.async { [weak self] in
@@ -131,7 +176,7 @@ final class MusicNavigator: ObservableObject {
         if orientation.isLandscape {
             coverFlowOrientation = orientation
             guard screen != .coverFlow else { return }
-            oldMusicResignKeyboard()
+            oldOSHideKeyboard()
             screenBeforeCoverFlow = screen
             withAnimation(.easeInOut(duration: 0.35)) {
                 screen = .coverFlow

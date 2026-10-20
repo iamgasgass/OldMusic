@@ -62,12 +62,12 @@ struct MusicVideosView: View {
                     .opacity(theme.isDark ? 0.8 : 1)
                 Spacer().frame(height: 35)
                 Text("No Videos")
-                    .font(OldMusicFont.bold(20))
+                    .font(OldOSFont.bold(20))
                     .foregroundColor(theme.emptyText)
                 Spacer().frame(height: 20)
                 HStack(spacing: 5) {
                     Text("You can download videos from iTunes.")
-                        .font(OldMusicFont.bold(14))
+                        .font(OldOSFont.bold(14))
                         .foregroundColor(theme.emptyText)
                     ZStack {
                         Circle().fill(theme.emptyArrowCircle).frame(width: 14, height: 14)
@@ -110,7 +110,7 @@ private struct MusicVideoPlayerScreen: View {
             MusicVideoPlayer(url: url).ignoresSafeArea()
             Button(action: onDone) {
                 Text("Done")
-                    .font(OldMusicFont.bold(13))
+                    .font(OldOSFont.bold(13))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)

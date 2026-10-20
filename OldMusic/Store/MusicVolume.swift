@@ -50,7 +50,7 @@ final class MusicVolume: ObservableObject {
 
     func set(_ newLevel: Double) {
         if volumeView.superview == nil {
-            install(in: OldMusicScreen.keyWindow)
+            install(in: OldOSScreen.keyWindow)
         }
         let value = Float(min(max(newLevel / 100, 0), 1))
         let slider = volumeView.subviews.compactMap { $0 as? UISlider }.first

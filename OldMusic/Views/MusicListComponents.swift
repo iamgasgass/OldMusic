@@ -81,7 +81,7 @@ struct MusicSeparator: View {
 
     var body: some View {
         Rectangle()
-            .fill(theme.rowSeparator)
+            .fill(theme.listSeparator)
             .frame(height: 0.95)
     }
 }
@@ -101,7 +101,7 @@ struct MusicSectionHeader: View {
                 .oldOSBorder(width: 1.2, edges: [.top], gradient: LinearGradient(oldOS: theme.headerInnerBorder))
             HStack {
                 Text(text)
-                    .font(OldMusicFont.bold(18))
+                    .font(OldOSFont.bold(18))
                     .foregroundColor(theme.headerText)
                     .shadow(color: theme.headerTextShadow, radius: 0, x: 0, y: 1.2)
                     .textCase(.none)
@@ -129,8 +129,8 @@ struct MusicTextRow: View {
             Spacer(minLength: 0)
             HStack {
                 Text(title)
-                    .font(OldMusicFont.bold(18))
-                    .foregroundColor(theme.rowText)
+                    .font(OldOSFont.bold(18))
+                    .foregroundColor(theme.listRowText)
                     .lineLimit(1)
                     .padding(.leading, 11)
                     .padding(.trailing, 40)
@@ -165,14 +165,14 @@ struct MusicArtworkRow: View {
                     .clipped()
                 VStack(alignment: .leading, spacing: 0) {
                     Text(title)
-                        .font(OldMusicFont.bold(18))
-                        .foregroundColor(theme.rowText)
+                        .font(OldOSFont.bold(18))
+                        .foregroundColor(theme.listRowText)
                         .lineLimit(1)
                     if let subtitle, !subtitle.isEmpty {
                         Spacer().frame(height: 1)
                         Text(subtitle)
-                            .font(OldMusicFont.regular(14))
-                            .foregroundColor(theme.rowDetail)
+                            .font(OldOSFont.regular(14))
+                            .foregroundColor(theme.listRowDetail)
                             .lineLimit(1)
                     }
                 }
@@ -202,13 +202,13 @@ struct MusicSongRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(song.title ?? "---")
-                        .font(OldMusicFont.bold(18))
-                        .foregroundColor(theme.rowText)
+                        .font(OldOSFont.bold(18))
+                        .foregroundColor(theme.listRowText)
                         .lineLimit(1)
                     Spacer().frame(height: 1)
                     Text("\(song.albumTitle ?? "---") - \(song.artist ?? "---")")
-                        .font(OldMusicFont.regular(14))
-                        .foregroundColor(theme.rowDetail)
+                        .font(OldOSFont.regular(14))
+                        .foregroundColor(theme.listRowDetail)
                         .lineLimit(1)
                 }
                 .padding(.leading, 11)
@@ -236,8 +236,8 @@ struct MusicShuffleRow: View {
                 Spacer(minLength: 0)
                 HStack {
                     Text("Shuffle")
-                        .font(OldMusicFont.bold(18))
-                        .foregroundColor(theme.rowText)
+                        .font(OldOSFont.bold(18))
+                        .foregroundColor(theme.listRowText)
                         .lineLimit(1)
                     Image("shuffle_icon")
                     Spacer()
@@ -261,7 +261,7 @@ struct MusicListFooter: View {
         HStack {
             Spacer()
             Text(text)
-                .font(OldMusicFont.regular(20))
+                .font(OldOSFont.regular(20))
                 .foregroundColor(theme.listFooterText)
                 .lineLimit(1)
             Spacer()
@@ -282,11 +282,11 @@ struct MusicEmptyView: View {
             VStack(spacing: 12) {
                 Spacer()
                 Text(title)
-                    .font(OldMusicFont.bold(20))
+                    .font(OldOSFont.bold(20))
                     .foregroundColor(theme.emptyText)
                 if let message {
                     Text(message)
-                        .font(OldMusicFont.bold(14))
+                        .font(OldOSFont.bold(14))
                         .foregroundColor(theme.emptyText)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 30)
@@ -336,7 +336,7 @@ struct MusicIndexBar: ViewModifier {
                                                     .font(.system(size: 11, weight: .bold))
                                             } else {
                                                 Text(entry)
-                                                    .font(OldMusicFont.bold(13.25))
+                                                    .font(OldOSFont.bold(13.25))
                                             }
                                         }
                                         .foregroundColor(theme.indexText)
@@ -386,5 +386,31 @@ struct MusicIndexBar: ViewModifier {
 extension View {
     func musicIndexBar(available: [String], hidden: Bool) -> some View {
         modifier(MusicIndexBar(available: available, hidden: hidden))
+    }
+}
+
+// MARK: - Long press → iOS 6 action sheet
+
+/// Long-pressing a song opens the action sheet (Play Next, Add to Up Next,
+/// Go to Album, Go to Artist, Share Song). The row's own tap must be wrapped
+/// in `navigator.tap { }` so the release of the long press does not play it.
+struct MusicSongActions: ViewModifier {
+    @EnvironmentObject private var navigator: MusicNavigator
+    let song: MPMediaItem
+    let list: [MPMediaItem]
+
+    func body(content: Content) -> some View {
+        content.simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                OldMusicHaptics.press()
+                navigator.presentActions(for: song, in: list)
+            }
+        )
+    }
+}
+
+extension View {
+    func musicSongActions(_ song: MPMediaItem, in list: [MPMediaItem]) -> some View {
+        modifier(MusicSongActions(song: song, list: list))
     }
 }

@@ -54,6 +54,9 @@ final class MusicPlayer: ObservableObject {
         let shuffle = system.shuffleMode
         shuffleOn = !(shuffle == .off || shuffle == .default)
         repeatMode = system.repeatMode == .default ? MPMusicRepeatMode.none : system.repeatMode
+        if !supportsSpeed && playbackRate != 1 {
+            playbackRate = 1
+        }
     }
 
     var isPlaying: Bool { playbackState == .playing }
@@ -76,7 +79,7 @@ final class MusicPlayer: ObservableObject {
     /// Queues `items` in order and starts at `start` (or a random song when shuffling).
     func play(_ items: [MPMediaItem], startingAt start: MPMediaItem? = nil, shuffle: Bool = false) {
         guard !items.isEmpty else { return }
-        oldMusicResignKeyboard()
+        oldOSHideKeyboard()
 
         let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: items))
         if shuffle {
@@ -125,6 +128,99 @@ final class MusicPlayer: ObservableObject {
 
     func seek(to time: TimeInterval) {
         system.currentPlaybackTime = max(0, time)
+    }
+
+    // MARK: Up Next
+
+    /// Inserts `items` right after the current song (starts playing if idle).
+    func playNext(_ items: [MPMediaItem]) {
+        guard !items.isEmpty else { return }
+        guard nowPlayingItem != nil else {
+            play(items)
+            return
+        }
+        system.prepend(MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: items)))
+    }
+
+    /// Adds `items` at the end of the queue (starts playing if idle).
+    func addToUpNext(_ items: [MPMediaItem]) {
+        guard !items.isEmpty else { return }
+        guard nowPlayingItem != nil else {
+            play(items)
+            return
+        }
+        system.append(MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: items)))
+    }
+
+    // MARK: Genius
+
+    /// The atom button. Apple's Genius service is gone, so — like a Genius
+    /// playlist — OldMusic builds a mix of up to 25 songs of the same genre
+    /// (topped up with the same artist) around the current song, and keeps
+    /// playing the current song from where it is.
+    @discardableResult
+    func playGenius(from library: [MPMediaItem]) -> Bool {
+        guard let current = nowPlayingItem ?? system.nowPlayingItem else { return false }
+        var pool = library.filter {
+            $0.persistentID != current.persistentID
+                && current.genrePersistentID != 0
+                && $0.genrePersistentID == current.genrePersistentID
+        }
+        if pool.count < 10 {
+            let sameArtist = library.filter {
+                $0.persistentID != current.persistentID
+                    && $0.artistPersistentID == current.artistPersistentID
+                    && !pool.contains($0)
+            }
+            pool.append(contentsOf: sameArtist)
+        }
+        guard !pool.isEmpty else { return false }
+
+        let mix = [current] + Array(pool.shuffled().prefix(24))
+        let resumeAt = currentTime
+        let wasPlaying = isPlaying
+
+        system.shuffleMode = .off
+        let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: mix))
+        descriptor.startItem = current
+        system.setQueue(with: descriptor)
+        system.prepareToPlay { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.system.currentPlaybackTime = resumeAt
+                if wasPlaying { self.system.play() }
+                self.refresh()
+            }
+        }
+        return true
+    }
+
+    // MARK: Speed (podcasts, audiobooks, iTunes U)
+
+    @Published private(set) var playbackRate: Float = 1
+
+    /// iOS 6 showed a speed button instead of repeat for spoken content.
+    var supportsSpeed: Bool {
+        guard let item = nowPlayingItem else { return false }
+        return !item.mediaType.intersection([.podcast, .audioBook, .audioITunesU]).isEmpty
+    }
+
+    /// 1× → 2× → ½× → 1×.
+    func cycleSpeed() {
+        let next: Float
+        switch playbackRate {
+        case 1: next = 2
+        case 2: next = 0.5
+        default: next = 1
+        }
+        playbackRate = next
+        system.currentPlaybackRate = next
+    }
+
+    func applyRateIfNeeded() {
+        if isPlaying, system.currentPlaybackRate > 0, abs(system.currentPlaybackRate - playbackRate) > 0.01 {
+            system.currentPlaybackRate = playbackRate
+        }
     }
 
     /// Off → Repeat All → Repeat One → Off.
