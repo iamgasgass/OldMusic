@@ -94,6 +94,31 @@ struct MusicSectionHeader: View {
     let text: String
 
     var body: some View {
+        if theme.isDark {
+            // OldSafari Private section header (SafariLibraryView), 1:1.
+            ZStack {
+                LinearGradient(oldOS: theme.barGradient)
+                    .oldOSBorder(width: 0.95, edges: [.bottom], color: theme.barHairline)
+                HStack {
+                    Text(text)
+                        .font(OldOSFont.bold(18))
+                        .foregroundColor(.white)
+                        .shadow(color: Color.black.opacity(0.45), radius: 0, x: 0, y: -1)
+                        .textCase(.none)
+                        .lineLimit(1)
+                        .padding(.leading, 12)
+                    Spacer()
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 23, maxHeight: .infinity)
+            .clipped()
+            .listRowInsets(EdgeInsets())
+        } else {
+            standardHeader
+        }
+    }
+
+    private var standardHeader: some View {
         ZStack {
             Rectangle()
                 .fill(LinearGradient(oldOS: theme.headerGradient))

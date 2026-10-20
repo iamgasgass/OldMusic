@@ -416,10 +416,13 @@ struct OldMusicTheme {
 
         // iPod surfaces, built from the same graphite values
         isDark: true,
+        // OldSafari Private toolbar, value for value.
         searchGradient: [
             OldOSStop(.oldOS(122, 122, 124), 0),
             OldOSStop(.oldOS(96, 96, 98), 0.04),
-            OldOSStop(.oldOS(58, 58, 60), 1)
+            OldOSStop(.oldOS(58, 58, 60), 0.51),
+            OldOSStop(.oldOS(50, 50, 52), 0.51),
+            OldOSStop(.oldOS(28, 28, 30), 1)
         ],
         searchHairline: .oldOS(10, 10, 11),
         searchFieldStroke: .oldOS(16, 16, 18),

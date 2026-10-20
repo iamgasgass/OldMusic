@@ -90,6 +90,14 @@ struct MusicAlbumView: View {
             LazyVStack(spacing: 0) {
                 header(artwork: artwork, count: tracks.count, totalTime: totalTime)
 
+                // iOS 6: "Shuffle ⤮" row between the album header and the tracks.
+                MusicShuffleRow {
+                    MusicPlayer.shared.play(tracks, shuffle: true)
+                    navigator.showNowPlaying()
+                }
+                .buttonStyle(.plain)
+                .background(theme.listBackground)
+
                 ForEach(Array(tracks.enumerated()), id: \.element.persistentID) { index, track in
                     Button {
                         navigator.tap {
