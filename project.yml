@@ -1,0 +1,65 @@
+name: OldMusic
+
+options:
+  bundleIdPrefix: com.iamgasgass
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+packages:
+  PureSwiftUITools:
+    url: https://github.com/CodeSlicing/pure-swift-ui-tools.git
+    exactVersion: 2.0.2
+  Introspect:
+    url: https://github.com/siteline/SwiftUI-Introspect.git
+    exactVersion: 0.1.4
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    ENABLE_BITCODE: NO
+
+targets:
+  OldMusic:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: OldMusic
+        excludes:
+          - "Resources/Info.plist"
+    settings:
+      base:
+        PRODUCT_NAME: OldMusic
+        PRODUCT_BUNDLE_IDENTIFIER: com.iamgasgass.oldmusic
+        INFOPLIST_FILE: OldMusic/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_OBJC_BRIDGING_HEADER: OldMusic/OldMusic-Bridging-Header.h
+        CLANG_ENABLE_OBJC_ARC: YES
+        CLANG_ENABLE_MODULES: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_PREVIEWS: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
+        GCC_WARN_INHIBIT_ALL_WARNINGS: YES
+        SWIFT_SUPPRESS_WARNINGS: YES
+        OTHER_LDFLAGS: "$(inherited) -ObjC"
+    dependencies:
+      - package: PureSwiftUITools
+        product: PureSwiftUITools
+      - package: Introspect
+        product: Introspect
+      - sdk: MediaPlayer.framework
+      - sdk: AVKit.framework
+      - sdk: CoreTelephony.framework
+      - sdk: QuartzCore.framework
+    scheme:
+      testTargets: []

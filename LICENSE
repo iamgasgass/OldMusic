@@ -1,0 +1,11 @@
+OldMusic is derived from The OldOS Project by Zane Kleinberg (@zzanehip),
+licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
+https://creativecommons.org/licenses/by/4.0/
+Original project: https://github.com/zzanehip/The-OldOS-Project
+
+Changes made for OldMusic (standalone iPod app, bug fixes, full-screen adaptation)
+are marked in the source code with "OldMusic fix" / "OldMusic:".
+
+Bundled third-party components keep their own licenses:
+ - iCarousel, FXImageView, ReflectionView (Nick Lockwood) — zlib license (see headers)
+ - UIView+FlipTransition — see header
