@@ -58,7 +58,7 @@ struct MusicMiniPlayer: View {
                 }
                 .lineLimit(1)
                 .offset(x: dragX * 0.35)
-                .opacity(1 - min(abs(dragX) / 220, 0.6))
+                .opacity(Double(1 - min(abs(dragX) / CGFloat(220), CGFloat(0.6))))
 
                 Spacer(minLength: 4)
 

@@ -28,7 +28,7 @@ struct OldMusicRootView: View {
                         // while Now Playing is up.
                         .overlay(
                             Color.black
-                                .opacity(navigator.screen == .nowPlaying ? 0.45 * (1 - min(nowPlayingDrag / 500, 1)) : 0)
+                                .opacity(navigator.screen == .nowPlaying ? dimOpacity : 0)
                                 .allowsHitTesting(false)
                         )
                         .transition(.opacity)
@@ -103,6 +103,12 @@ struct OldMusicRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .oldMusicDeviceShaken)) { _ in
             shakeToShuffle()
         }
+    }
+
+    /// Library dimming under the Now Playing sheet, fading while it is dragged down.
+    private var dimOpacity: Double {
+        let progress: CGFloat = min(nowPlayingDrag / CGFloat(500), CGFloat(1))
+        return 0.45 * Double(1 - progress)
     }
 
     private var theme: OldMusicTheme {
