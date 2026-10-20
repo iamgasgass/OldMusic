@@ -1,76 +1,98 @@
 # OldMusic
 
-L'app **iPod di iOS 6** estratta da [The OldOS Project](https://github.com/zzanehip/The-OldOS-Project) (di Zane Kleinberg) e trasformata in un'app standalone, a schermo intero, per iPhone e iPad recenti.
+> A standalone, modern iOS rebuild of the **iPod** app from **The OldOS Project**, preserving the iOS 6 music player look while running full screen on current iPhones and iPads with iOS 16 or later.
 
-- **Nome:** OldMusic
-- **Bundle ID:** `com.iamgasgass.oldmusic`
-- **iOS minimo:** 16.0 (iPhone + iPad, solo verticale; Cover Flow ruotando il dispositivo)
-- **Progetto:** generato con [XcodeGen](https://github.com/yonaskolb/XcodeGen) da `project.yml`
-- **CI:** `.github/workflows/build.yml` → produce `OldMusic.ipa` (non firmato) come artifact
+[![iOS](https://img.shields.io/badge/iOS-16.0%2B-0A84FF?logo=apple&logoColor=white)](#requirements)
+[![Swift](https://img.shields.io/badge/Swift-SwiftUI-F05138?logo=swift&logoColor=white)](#technology)
+[![Build](https://img.shields.io/github/actions/workflow/status/iamgasgass/OldMusic/build.yml?branch=main&label=build)](https://github.com/iamgasgass/OldMusic/actions)
+[![License](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey)](#license-and-attribution)
 
-## Cosa c'è dentro (dal progetto originale)
+## Overview
 
-Tutte le viste dell'app iPod di OldOS, con gli stessi nomi, gradienti e misure:
+**OldMusic** brings back the iOS 6 iPod app: blue-grey aluminium navigation bar, glossy search field, lettered table headers with the A–Z index, the black glass tab bar, the Now Playing screen with artwork reflection and the flip-over track list, and Cover Flow when the device is turned sideways.
 
-| Area | Viste originali |
-| --- | --- |
-| Shell | `iPod`, `iPodTabView`, `TabButton`, `ipod_title_bar`, `status_bar_in_app`, `status_bar` |
-| Playlists | `ipod_playlists`, `SkeuomorphicList_Playlists`, `ipod_playlists_desination` (Edit/Clear/Delete, Shuffle) |
-| Artists | `ipod_artists`, `SkeuomorphicList_Artists`, `artists_destination`, `albums_destination` |
-| Songs | `ipod_songs`, `SkeuomorphicList_Songs`, `shuffle`, indice verticale `VerticalIndex` |
-| Videos | `ipod_videos` ("No Videos" + `Arrow`) |
-| More | `ipod_more` (Albums, Audiobooks, Composers, Genres, iTunes U, Podcasts) |
-| Now Playing | `iPodNowPlaying`, `now_playing_title_bar`, `now_playing_timing_controls` (scrubber, repeat, shuffle), `now_playing_tracks` (flip con lista tracce + stelle), `now_playing_footer` (prev/play/next + volume) |
-| Cover Flow | `CoverFlowView`, `CoverFlow_Sub` (iCarousel `coverFlow2`), `coverflow_selected_item` (flip con tracce) |
-| Ricerca | `ipod_search` con la **tastiera iOS 6 di OldOS** (`OldOSKeyboard/`, copiata integralmente) |
-| Comuni | `CustomSlider`, `VolumeObserver`, ombre interne, bordi, `alpha_list_header`, `generic_text_list_header` |
+It is not a skin over the Music app. OldMusic is a SwiftUI application that reads the device music library through MediaPlayer and drives the system music player, so everything you already have on your device (synced, purchased or added from Apple Music) can be browsed and played.
 
-Asset: `iPod Icons`, `UIKit`, `UIKit Text Interaction` (tastiera) e i pulsanti condivisi copiati dall'asset catalog originale; icona dell'app = icona iPod di OldOS.
+## Highlights
 
-## Bug dell'originale corretti
+- iOS 6 iPod interface rebuilt for a modern full-screen layout: bars extend behind the status bar, notch / Dynamic Island and the home indicator.
+- **Light and Dark Mode**: the classic blue-grey skin in Light Mode, an iOS 6 graphite skin in Dark Mode (bars, search, lists, headers, album pages, buttons). Now Playing, the tab bar and Cover Flow keep their original black chrome. The status bar style follows the visible screen.
+- Playlists, Artists, Songs, Videos and More (Albums, Audiobooks, Composers, Genres, iTunes U, Podcasts), all navigable with the iOS 6 push / pop slides.
+- Search in every list with Artists, Albums and Songs results.
+- A–Z index bar using the same sections as the Music app; letters with no entries jump to the next section.
+- Tapping a song queues the whole list from that song; Shuffle rows; repeat Off → All → One; shuffle toggle.
+- Now Playing: square artwork with reflection, tap for scrubber / repeat / shuffle, double tap or the album button to flip to the album's tracks, volume slider (the system volume HUD is hidden).
+- Cover Flow (iCarousel `coverFlow2`) with album flip and track list.
+- Library changes are picked up live; loading happens in the background.
+- No third-party Swift packages. Unsigned IPA workflow for GitHub Actions.
 
-1. **Riproduzione bloccata senza Apple Music**: ogni tap passava da `SKCloudServiceController` e suonava solo con abbonamento (`musicCatalogPlayback`). Ora la libreria locale suona sempre.
-2. **Notifiche del player mai attivate** (`beginGeneratingPlaybackNotifications` mancante): play/pausa, titolo, copertina e brano evidenziato non si aggiornavano.
-3. **Coda di un solo brano**: toccando un brano si accodava solo quello (avanti/indietro non funzionavano). Ora viene accodata la lista intera (Songs, album, playlist, risultati di ricerca, More…) partendo dal brano scelto, come su iOS 6. Shuffle usa la modalità shuffle del player.
-4. **Tracce dell'album in Now Playing ordinate per titolo** → ora per disco/numero traccia.
-5. **`removeDuplicates` per titolo** eliminava tracce diverse con lo stesso nome → ora per `persistentID`.
-6. **Durata album errata** ("N Songs, X Mins." usava la durata di un solo brano) → somma reale; anno con fallback su `releaseDate`.
-7. **Artisti nei risultati di ricerca non cliccabili** → aprono l'artista; aggiunta la sezione **Albums** nei risultati (come iOS 6).
-8. **Indici A–Z sbagliati** (minuscole, accenti, "The …" finivano in "#") → sezioni prese da `MPMediaQuery.itemSections/collectionSections`, le stesse dell'app Musica. Tap su una lettera vuota → sezione successiva.
-9. **Songs escludeva i brani iCloud** mentre Artists no → libreria coerente; ricarica automatica quando la libreria cambia (`MPMediaLibraryDidChange`), caricamento in background.
-10. **Stato SwiftUI modificato da thread in background** (timer di Now Playing, callback del player) → tutto sul main thread.
-11. **Scrubber**: la posizione veniva impostata da un thread in background a ogni movimento e "saltava indietro" → seek unico sul main thread al rilascio.
-12. **Volume**: `MPVolumeView` creato e buttato a ogni movimento → un'unica `MPVolumeView` nascosta nella finestra (sopprime anche l'HUD moderno).
-13. **Repeat** partiva da "Repeat One" con modalità `.default`; **Shuffle** risultava acceso con `.default` → ciclo corretto Off → All → One.
-14. **Network monitor**: creava un nuovo `NWPathMonitor` ogni secondo senza mai fermarlo (leak) → un solo monitor condiviso.
-15. **Cover Flow**: crash possibili con libreria vuota / `currentItemView!`; orientamento non aggiornato passando da landscape sinistro a destro; carousel non ricaricato se la libreria finiva di caricare dopo; tap sulle tracce suonava un solo brano. Le immagini `CoverFlowPlayIndicator`/`CoverFlowInfoIcon` non esistevano nell'asset catalog → disegnate (il pulsante play/pausa funziona).
-16. Pulsante **Now Playing** e icona "in riproduzione" nelle liste non reattivi → osservano il player.
-17. **More** e **Videos** erano solo grafici → ora navigabili (Albums, Generi → album, Compositori, Audiolibri, Podcast, iTunes U) e i video della libreria (se presenti) vengono elencati e riprodotti.
+## Architecture
 
-## Schermo intero
+```text
+OldMusic/
+├── .github/workflows/build.yml       # XcodeGen + unsigned IPA build
+├── project.yml                       # XcodeGen project description
+├── OldMusic/
+│   ├── OldMusicApp.swift             # App / scene delegate, status-bar aware hosting controller
+│   ├── Models/                       # MusicRoute (tabs, pushed screens), MusicSection (A–Z)
+│   ├── Store/                        # MusicLibrary, MusicPlayer, MusicNavigator, MusicVolume
+│   ├── Views/                        # Root, library shell, lists, search, Now Playing, Cover Flow
+│   ├── Support/                      # OldMusicKit (drawing helpers), palette (Light / Dark), slider
+│   ├── Vendor/iCarousel/             # Objective-C Cover Flow carousel
+│   ├── Assets.xcassets/              # OldOS iPod artwork and app icon (Any / Dark / Tinted)
+│   └── Info.plist
+├── EXTRACTION.json
+├── README.md
+└── LICENSE
+```
 
-- Status bar di sistema nascosta: viene disegnata quella di iOS 6 subito sotto la notch / Dynamic Island, e l'area sopra viene riempita con lo stesso colore.
-- La barra dei tab resta sopra l'indicatore Home; il fondo è nero come su iOS 6.
-- **Now Playing** come su iPhone 5 con iOS 6: copertina quadrata in alto e riflesso nello spazio restante sopra i controlli; il retro (lista tracce) occupa tutta l'altezza.
-- iPad: `UIRequiresFullScreen`, interfaccia verticale; Cover Flow si attiva ruotando il dispositivo (come l'originale).
+- `MusicLibrary` loads songs, artists, albums, playlists, genres, composers, audiobooks, podcasts, iTunes U and videos on a background queue and reloads on `MPMediaLibraryDidChange`.
+- `MusicPlayer` wraps `MPMusicPlayerController.systemMusicPlayer`, publishes the now playing item, state, shuffle and repeat, and queues lists with `MPMusicPlayerMediaItemQueueDescriptor`.
+- `MusicNavigator` owns the visible screen (library / Now Playing / Cover Flow), the selected tab and one push stack per tab.
+- `OldMusicTheme` holds every colour of both skins and is passed down through the environment.
 
-## Build
+## Requirements
 
-### GitHub Actions
-Fai push della repo su GitHub: il workflow **Build OldMusic** (`.github/workflows/build.yml`) gira su `macos-15` con l'ultimo Xcode stabile, installa XcodeGen, genera `OldMusic.xcodeproj` da `project.yml`, compila per `iphoneos` senza firma e carica `OldMusic.ipa` come artifact (da firmare/installare con AltStore, Sideloadly, TrollStore, ecc.). Si può avviare anche a mano (*workflow_dispatch*).
+- macOS with Xcode 16 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+- iPhone or iPad running iOS 16.0 or later (the Simulator has no music library).
 
-### In locale
+## Build Locally
+
 ```bash
+git clone https://github.com/iamgasgass/OldMusic.git
+cd OldMusic
 brew install xcodegen
 xcodegen generate
 open OldMusic.xcodeproj
 ```
-Imposta il tuo Team in *Signing & Capabilities* e avvia su un dispositivo reale (il simulatore non ha una libreria musicale).
 
-## Dipendenze (Swift Package Manager)
-- [PureSwiftUITools 2.0.2](https://github.com/CodeSlicing/pure-swift-ui-tools) (+ PureSwiftUI) — stesse versioni dell'originale
-- [SwiftUI-Introspect 0.1.4](https://github.com/siteline/SwiftUI-Introspect) — usata dalla tastiera OldOS
-- iCarousel / FXImageView / ReflectionView (Objective-C, incluse in `OldMusic/Carousel`)
+Select your team under **Signing & Capabilities** and run on a device.
 
-## Licenza
-Il codice proviene da The OldOS Project — Creative Commons Attribution 4.0 (CC BY 4.0), © Zane Kleinberg. Tutte le modifiche di OldMusic sono segnate nel codice con `OldMusic fix`.
+## Unsigned IPA via GitHub Actions
+
+`.github/workflows/build.yml` runs on pushes to `main` / `master`, on pull requests and manually (`workflow_dispatch`). It generates the project from `project.yml`, builds with `CODE_SIGNING_ALLOWED=NO`, verifies the bundle and icon, packages `OldMusic-Unsigned.ipa` and uploads it together with the build log. Sign the IPA with AltStore, Sideloadly, Xcode or your own profile before installing.
+
+## Known Limits
+
+- Third-party apps cannot edit library playlists or write ratings: the playlist Edit / Clear / Delete buttons and the star rating are drawn as in OldOS but not saved.
+- Videos without an accessible asset URL (DRM) are handed to the system player instead of the in-app player.
+
+## License and Attribution
+
+OldMusic is a standalone rebuild derived from the iPod app in **The OldOS Project** by [@zzanehip](https://github.com/zzanehip), licensed under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/).
+
+```text
+OldMusic is based on the iPod implementation from The OldOS Project
+by @zzanehip, licensed under CC BY 4.0.
+Original project: https://github.com/zzanehip/The-OldOS-Project
+```
+
+iCarousel is © Nick Lockwood, zlib license (see `Vendor/iCarousel/iCarousel.h`).
+
+## Disclaimer
+
+OldMusic is an independent, unofficial project. It is not affiliated with, endorsed by, or associated with Apple Inc. iPod and iOS are trademarks of Apple Inc.
+
+---
+
+- Built by [iamgasgass](https://github.com/iamgasgass)
