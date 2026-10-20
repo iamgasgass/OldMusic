@@ -1,0 +1,76 @@
+name: Build OldMusic
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project (project.yml)
+        run: xcodegen generate --spec project.yml
+
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project OldMusic.xcodeproj \
+            -scheme OldMusic \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
+
+      - name: Build (iphoneos, Release, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project OldMusic.xcodeproj \
+            -scheme OldMusic \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build | tee "$RUNNER_TEMP/xcodebuild.log"
+
+      - name: Package IPA
+        run: |
+          APP_PATH="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/OldMusic.app"
+          test -d "$APP_PATH"
+          rm -rf "$RUNNER_TEMP/ipa" && mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          zip -qry "$GITHUB_WORKSPACE/OldMusic.ipa" Payload
+          ls -lh "$GITHUB_WORKSPACE/OldMusic.ipa"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: OldMusic-unsigned-ipa
+          path: OldMusic.ipa
+          if-no-files-found: error
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: ignore
