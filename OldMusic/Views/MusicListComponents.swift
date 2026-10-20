@@ -414,3 +414,24 @@ extension View {
         modifier(MusicSongActions(song: song, list: list))
     }
 }
+
+/// Long press on an album row: Play, Shuffle, Play Next, Add to Up Next, Go to Artist.
+struct MusicAlbumActions: ViewModifier {
+    @EnvironmentObject private var navigator: MusicNavigator
+    let album: MPMediaItemCollection
+
+    func body(content: Content) -> some View {
+        content.simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                OldMusicHaptics.press()
+                navigator.presentActions(forAlbum: album)
+            }
+        )
+    }
+}
+
+extension View {
+    func musicAlbumActions(_ album: MPMediaItemCollection) -> some View {
+        modifier(MusicAlbumActions(album: album))
+    }
+}

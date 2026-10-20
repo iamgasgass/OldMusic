@@ -8,6 +8,7 @@ struct MusicLibraryScreen: View {
     @Environment(\.oldMusicTheme) private var theme
     @EnvironmentObject private var navigator: MusicNavigator
     @EnvironmentObject private var library: MusicLibrary
+    @ObservedObject private var player = MusicPlayer.shared
     let topInset: CGFloat
     let bottomInset: CGFloat
 
@@ -38,9 +39,24 @@ struct MusicLibraryScreen: View {
             .clipped()
             .zIndex(1)
 
+            // Bottom sheet, collapsed: the mini player above the tab bar.
+            MusicMiniPlayer(
+                onOpen: { navigator.showNowPlaying() },
+                onLongPress: {
+                    navigator.presentPanel(MusicPanels.upNext(
+                        navigator: navigator,
+                        anchor: 0.5,
+                        edge: .bottom,
+                        inset: bottomInset + 57 + MusicMiniPlayer.height
+                    ))
+                }
+            )
+            .zIndex(3)
+
             MusicTabBar(bottomInset: bottomInset)
                 .zIndex(2)
         }
+        .animation(.easeOut(duration: 0.25), value: player.nowPlayingItem == nil)
     }
 
     private var slide: AnyTransition {
@@ -132,33 +148,20 @@ struct MusicNavigationBar: View {
                     .transition(.opacity)
                 }
 
-                if player.nowPlayingItem != nil {
+                // Right side: the "Sort" drop-down on the Songs list. Now Playing
+                // is reached from the mini player (bottom sheet).
+                if navigator.tab == .songs && navigator.depth == 0 {
                     HStack {
                         Spacer()
-                        Button {
-                            navigator.showNowPlaying()
-                        } label: {
-                            ZStack {
-                                Image("now_playing_icon")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 67, height: 40)
-                                    .saturation(theme.barButtonSaturation)
-                                    .brightness(theme.barButtonBrightness)
-                                VStack(spacing: 0) {
-                                    Text("Now")
-                                    Text("Playing")
-                                }
-                                .font(OldOSFont.bold(11))
-                                .foregroundColor(.white)
-                                .shadow(color: Color.black.opacity(0.6), radius: 0, x: 0, y: -1)
-                                .multilineTextAlignment(.center)
-                                .offset(x: -3)
-                            }
+                        OldOSRectangleButton(
+                            title: "Sort",
+                            type: theme.secondaryButton
+                        ) {
+                            navigator.presentPanel(MusicPanels.songSort(navigator: navigator, inset: topInset + barHeight))
                         }
-                        .buttonStyle(.plain)
-                        .padding(.trailing, 5.5)
+                        .padding(.trailing, 5)
                     }
+                    .transition(.opacity)
                 }
             }
             .frame(height: barHeight)

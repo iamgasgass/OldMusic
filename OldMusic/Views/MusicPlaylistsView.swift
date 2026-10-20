@@ -5,6 +5,7 @@ import MediaPlayer
 struct MusicPlaylistsView: View {
     @EnvironmentObject private var library: MusicLibrary
     @EnvironmentObject private var navigator: MusicNavigator
+    @ObservedObject private var userData = MusicUserData.shared
 
     var body: some View {
         MusicSearchableList {
@@ -12,6 +13,9 @@ struct MusicPlaylistsView: View {
             smartRow("Recently Added", items: library.recentlyAdded)
             smartRow("Recently Played", items: library.recentlyPlayed)
             smartRow("Top 25 Most Played", items: library.topPlayed)
+            // Saved by OldMusic: stars from Now Playing and "Add to Favorites".
+            smartRow("My Top Rated", items: userData.topRatedSongs(in: library.songs))
+            smartRow("Favorites", items: userData.favoriteSongs(in: library.songs))
 
             ForEach(library.playlists, id: \.persistentID) { playlist in
                 Button {

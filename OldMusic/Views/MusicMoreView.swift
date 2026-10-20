@@ -144,7 +144,7 @@ struct MusicCollectionsView: View {
             MusicSearchableList {
                 ForEach(Array(collections.enumerated()), id: \.offset) { _, collection in
                     Button {
-                        open(collection)
+                        navigator.tap { open(collection) }
                     } label: {
                         if kind.usesArtwork {
                             MusicArtworkRow(
@@ -156,6 +156,7 @@ struct MusicCollectionsView: View {
                             MusicTextRow(title: collection.oldMusicName(for: kind))
                         }
                     }
+                    .if(kind == .albums) { $0.musicAlbumActions(collection) }
                     .musicRow(minHeight: kind.usesArtwork ? 60 : 44)
                 }
 

@@ -18,6 +18,10 @@ final class MusicPlayer: ObservableObject {
     @Published private(set) var playbackState: MPMusicPlaybackState = .stopped
     @Published private(set) var shuffleOn: Bool = false
     @Published private(set) var repeatMode: MPMusicRepeatMode = .none
+    /// The queue OldMusic handed to the system player (the system player does
+    /// not expose its queue to other apps), kept in sync with Play Next /
+    /// Add to Up Next. Used by the Up Next and Previous panels.
+    @Published private(set) var queue: [MPMediaItem] = []
 
     private var observers: [NSObjectProtocol] = []
 
@@ -49,6 +53,7 @@ final class MusicPlayer: ObservableObject {
         let item = system.nowPlayingItem
         if item?.persistentID != nowPlayingItem?.persistentID || (item == nil) != (nowPlayingItem == nil) {
             nowPlayingItem = item
+            MusicUserData.shared.recordPlay(item)
         }
         playbackState = system.playbackState
         let shuffle = system.shuffleMode
@@ -89,6 +94,7 @@ final class MusicPlayer: ObservableObject {
             descriptor.startItem = start ?? items.first
         }
         system.setQueue(with: descriptor)
+        queue = items
         system.prepareToPlay { [weak self] error in
             DispatchQueue.main.async {
                 if let error {
@@ -100,6 +106,7 @@ final class MusicPlayer: ObservableObject {
         }
         if let first = descriptor.startItem {
             nowPlayingItem = first
+            MusicUserData.shared.recordPlay(first)
         }
     }
 
@@ -140,6 +147,8 @@ final class MusicPlayer: ObservableObject {
             return
         }
         system.prepend(MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: items)))
+        let insertAt = min((currentQueueIndex ?? -1) + 1, queue.count)
+        queue.insert(contentsOf: items, at: insertAt)
     }
 
     /// Adds `items` at the end of the queue (starts playing if idle).
@@ -150,6 +159,7 @@ final class MusicPlayer: ObservableObject {
             return
         }
         system.append(MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: items)))
+        queue.append(contentsOf: items)
     }
 
     // MARK: Genius
@@ -184,6 +194,7 @@ final class MusicPlayer: ObservableObject {
         let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: mix))
         descriptor.startItem = current
         system.setQueue(with: descriptor)
+        queue = mix
         system.prepareToPlay { [weak self] _ in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -224,6 +235,40 @@ final class MusicPlayer: ObservableObject {
     }
 
     /// Off → Repeat All → Repeat One → Off.
+    // MARK: Queue panels
+
+    /// Position of the current song in `queue`.
+    var currentQueueIndex: Int? {
+        guard let current = nowPlayingItem else { return nil }
+        return queue.firstIndex { $0.persistentID == current.persistentID }
+    }
+
+    /// Songs after the current one (in queue order; with Shuffle on the
+    /// system picks its own order, which other apps cannot read).
+    var upNext: [MPMediaItem] {
+        guard let index = currentQueueIndex else { return [] }
+        return Array(queue.dropFirst(index + 1))
+    }
+
+    /// Songs before the current one, nearest first.
+    var previouslyQueued: [MPMediaItem] {
+        guard let index = currentQueueIndex else { return [] }
+        return Array(queue.prefix(index).reversed())
+    }
+
+    /// Jumps to a song of the current queue (or plays it on its own).
+    func jump(to item: MPMediaItem) {
+        if queue.contains(where: { $0.persistentID == item.persistentID }) {
+            system.nowPlayingItem = item
+            system.play()
+            nowPlayingItem = item
+            MusicUserData.shared.recordPlay(item)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.refresh() }
+        } else {
+            play([item])
+        }
+    }
+
     func cycleRepeat() {
         switch repeatMode {
         case .none, .default:

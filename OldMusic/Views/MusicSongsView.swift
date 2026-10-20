@@ -9,7 +9,8 @@ struct MusicSongsView: View {
     @ObservedObject private var player = MusicPlayer.shared
 
     var body: some View {
-        MusicSearchableList(indexLetters: library.songSections.map(\.letter)) {
+        let sort = navigator.songSort
+        MusicSearchableList(indexLetters: sort.usesSections ? library.songSections.map(\.letter) : nil) {
             MusicShuffleRow {
                 guard !library.songs.isEmpty else { return }
                 MusicPlayer.shared.play(library.songs, shuffle: true)
@@ -17,29 +18,46 @@ struct MusicSongsView: View {
             }
             .musicRow()
 
-            ForEach(library.songSections, id: \.letter) { section in
-                Section {
-                    ForEach(section.items, id: \.persistentID) { song in
-                        Button {
-                            navigator.tap {
-                                MusicPlayer.shared.play(library.songs, startingAt: song)
-                                navigator.showNowPlaying()
-                            }
-                        } label: {
-                            MusicSongRow(song: song, isPlaying: player.isNowPlaying(song))
+            if sort.usesSections {
+                ForEach(library.songSections, id: \.letter) { section in
+                    Section {
+                        ForEach(section.items, id: \.persistentID) { song in
+                            songButton(song, in: library.songs)
                         }
-                        .musicSongActions(song, in: library.songs)
-                        .musicRow()
+                    } header: {
+                        MusicSectionHeader(text: section.letter)
+                            .id(section.letter)
+                    }
+                }
+            } else {
+                // Sorted by artist / album / date added / play count: a flat
+                // list, queued in the same order it is shown.
+                let sorted = sort.sorted(library.songs)
+                Section {
+                    ForEach(sorted, id: \.persistentID) { song in
+                        songButton(song, in: sorted)
                     }
                 } header: {
-                    MusicSectionHeader(text: section.letter)
-                        .id(section.letter)
+                    MusicSectionHeader(text: sort.title)
                 }
             }
 
             MusicListFooter(text: "\(library.songs.count) Songs")
                 .musicRow()
         }
+    }
+
+    private func songButton(_ song: MPMediaItem, in list: [MPMediaItem]) -> some View {
+        Button {
+            navigator.tap {
+                MusicPlayer.shared.play(list, startingAt: song)
+                navigator.showNowPlaying()
+            }
+        } label: {
+            MusicSongRow(song: song, isPlaying: player.isNowPlaying(song))
+        }
+        .musicSongActions(song, in: list)
+        .musicRow()
     }
 }
 

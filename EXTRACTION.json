@@ -74,7 +74,11 @@
       "Lyrics over the Now Playing artwork",
       "Shake to Shuffle with the OldOS iOS 6 switch",
       "All Songs row for artists, remembered last tab, haptics",
-      "Full library browsing in More (albums, genres, composers, audiobooks, podcasts, iTunes U) and Videos"
+      "Full library browsing in More (albums, genres, composers, audiobooks, podcasts, iTunes U) and Videos",
+      "Bottom sheet player: iOS 6 black-glass mini player + Now Playing sheet with drag to close",
+      "OldSafari history drop-down panel reused for Up Next, Recently Played, Now Playing options and Songs sort",
+      "Local favorites, star ratings, listening history; Favorites and My Top Rated smart playlists",
+      "Album long-press action sheet"
     ]
   }
 }

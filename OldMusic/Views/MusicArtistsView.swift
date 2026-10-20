@@ -59,13 +59,14 @@ struct MusicArtistAlbumsView: View {
 
             ForEach(albums, id: \.persistentID) { album in
                 Button {
-                    navigator.push(.album(album))
+                    navigator.tap { navigator.push(.album(album)) }
                 } label: {
                     MusicArtworkRow(
                         image: album.oldMusicArtwork(120),
                         title: album.representativeItem?.albumTitle ?? "---"
                     )
                 }
+                .musicAlbumActions(album)
                 .musicRow(minHeight: 60)
             }
         }

@@ -20,21 +20,35 @@ final class MusicNavigator: ObservableObject {
 
     /// Song whose iOS 6 action sheet is open (long press on a song row).
     @Published var actionSong: MPMediaItem?
+    /// Album whose action sheet is open (long press on an album row).
+    @Published var actionAlbum: MPMediaItemCollection?
     /// The list the long-pressed song belongs to (used by "Play").
     private(set) var actionList: [MPMediaItem] = []
     /// Content handed to the system share sheet.
     @Published var shareContent: MusicShareContent?
+    /// OldSafari-style drop-down panel currently shown (Up Next, Sort, ...).
+    @Published private(set) var panel: MusicPanelRequest?
+    /// Songs tab order chosen from the Sort drop-down.
+    @Published var songSort: MusicSongSort = .title {
+        didSet { UserDefaults.standard.set(songSort.rawValue, forKey: Self.songSortKey) }
+    }
 
     private var screenBeforeCoverFlow: Screen = .library
     private var orientationObserver: NSObjectProtocol?
     private var suppressNextTap = false
 
     static let pushAnimation = Animation.linear(duration: 0.28)
+    /// Now Playing bottom sheet open / close.
+    static let sheetAnimation = Animation.spring(response: 0.42, dampingFraction: 0.9)
     private static let lastTabKey = "OldMusic.LastTab"
+    private static let songSortKey = "OldMusic.SongSort"
 
     init() {
         if let saved = UserDefaults.standard.string(forKey: Self.lastTabKey), let savedTab = MusicTab(rawValue: saved) {
             tab = savedTab
+        }
+        if let saved = UserDefaults.standard.string(forKey: Self.songSortKey), let sort = MusicSongSort(rawValue: saved) {
+            songSort = sort
         }
         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
         orientationObserver = NotificationCenter.default.addObserver(
@@ -117,9 +131,36 @@ final class MusicNavigator: ObservableObject {
         }
     }
 
+    // MARK: Drop-down panels
+
+    func presentPanel(_ request: MusicPanelRequest) {
+        oldOSHideKeyboard()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+            panel = request
+        }
+    }
+
+    func dismissPanel() {
+        withAnimation(.easeOut(duration: 0.18)) {
+            panel = nil
+        }
+    }
+
+    func presentActions(forAlbum album: MPMediaItemCollection) {
+        oldOSHideKeyboard()
+        suppressNextTap = true
+        withAnimation(.linear(duration: 0.25)) {
+            actionAlbum = album
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            self?.suppressNextTap = false
+        }
+    }
+
     func dismissActions() {
         withAnimation(.linear(duration: 0.2)) {
             actionSong = nil
+            actionAlbum = nil
         }
     }
 
@@ -153,7 +194,7 @@ final class MusicNavigator: ObservableObject {
         guard screen != .nowPlaying else { return }
         movingForward = true
         DispatchQueue.main.async { [weak self] in
-            withAnimation(Self.pushAnimation) {
+            withAnimation(Self.sheetAnimation) {
                 self?.screen = .nowPlaying
             }
         }
@@ -163,7 +204,7 @@ final class MusicNavigator: ObservableObject {
         guard screen != .library else { return }
         movingForward = false
         DispatchQueue.main.async { [weak self] in
-            withAnimation(Self.pushAnimation) {
+            withAnimation(Self.sheetAnimation) {
                 self?.screen = .library
             }
         }

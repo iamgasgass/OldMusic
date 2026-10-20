@@ -210,7 +210,7 @@ struct MusicSearchResults: View {
                 Section {
                     ForEach(albums, id: \.persistentID) { album in
                         Button {
-                            openAlbum(album)
+                            navigator.tap { openAlbum(album) }
                         } label: {
                             MusicArtworkRow(
                                 image: album.oldMusicArtwork(120),
@@ -218,6 +218,7 @@ struct MusicSearchResults: View {
                                 subtitle: album.representativeItem?.albumArtist ?? album.representativeItem?.artist
                             )
                         }
+                        .musicAlbumActions(album)
                         .musicRow(minHeight: 60)
                     }
                 } header: {

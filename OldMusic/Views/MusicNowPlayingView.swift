@@ -6,9 +6,13 @@ import MediaPlayer
 /// controls; double tap (or the bar's album button) flips to the track list.
 struct MusicNowPlayingView: View {
     @EnvironmentObject private var navigator: MusicNavigator
+    @EnvironmentObject private var library: MusicLibrary
+    @ObservedObject private var userData = MusicUserData.shared
     @ObservedObject private var player = MusicPlayer.shared
     let topInset: CGFloat
     let bottomInset: CGFloat
+    /// Vertical offset while the sheet is dragged down to close it.
+    @Binding var dragOffset: CGFloat
 
     @State private var artwork: UIImage = UIImage(named: "noartplaceholder") ?? UIImage()
     @State private var albumTracks: [MPMediaItem] = []
@@ -40,8 +44,10 @@ struct MusicNowPlayingView: View {
                     flipperBackground: flipperBackground,
                     flipLocked: flipLocked,
                     onBack: { navigator.showLibrary() },
-                    onFlip: flip
+                    onFlip: flip,
+                    onOptions: { presentOptions() }
                 )
+                .gesture(dismissDrag)
                 .zIndex(2)
 
                 ZStack(alignment: .top) {
@@ -89,6 +95,7 @@ struct MusicNowPlayingView: View {
                             .clipped()
                             .contentShape(Rectangle())
                             .oldOSBorder(width: 1, edges: [.top], color: .oldOS(53, 53, 53))
+                            .simultaneousGesture(dismissDrag)
                             .gesture(
                                 TapGesture(count: 2).onEnded { flip() }
                                     .exclusively(before: TapGesture(count: 1).onEnded {
@@ -127,6 +134,70 @@ struct MusicNowPlayingView: View {
         .compositingGroup()
         .onAppear { reload(tracks: true) }
         .onChange(of: player.nowPlayingItem?.persistentID) { _ in reload(tracks: true) }
+    }
+
+    /// Now Playing options, hanging from the bar like OldSafari's drop-downs.
+    private func presentOptions() {
+        guard let song = player.nowPlayingItem else { return }
+        var items: [MusicPanelItem] = []
+        if song.albumPersistentID != 0 {
+            items.append(MusicPanelItem(title: "Go to Album", subtitle: song.albumTitle ?? "", icon: "square.stack") {
+                navigator.dismissPanel()
+                MusicActions.goToAlbum(of: song, library: library, navigator: navigator)
+            })
+        }
+        if song.artistPersistentID != 0 {
+            items.append(MusicPanelItem(title: "Go to Artist", subtitle: song.artist ?? "", icon: "person") {
+                navigator.dismissPanel()
+                MusicActions.goToArtist(of: song, library: library, navigator: navigator)
+            })
+        }
+        let favorite = userData.isFavorite(song)
+        items.append(MusicPanelItem(title: favorite ? "Remove from Favorites" : "Add to Favorites", icon: favorite ? "heart.fill" : "heart", showsChevron: false) {
+            navigator.dismissPanel()
+            userData.toggleFavorite(song)
+        })
+        items.append(MusicPanelItem(title: "Genius Mix", subtitle: "Songs like this one", icon: "atom", showsChevron: false) {
+            navigator.dismissPanel()
+            player.playGenius(from: library.songs)
+        })
+        items.append(MusicPanelItem(title: "Up Next", subtitle: "\(player.upNext.count) songs", icon: "list.bullet") {
+            navigator.dismissPanel()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                navigator.presentPanel(MusicPanels.upNext(navigator: navigator, anchor: 0.92, edge: .top, inset: topInset + barHeight))
+            }
+        })
+        items.append(MusicPanelItem(title: "Share Song", icon: "square.and.arrow.up", showsChevron: false) {
+            navigator.dismissPanel()
+            MusicActions.share(song, navigator: navigator)
+        })
+        navigator.presentPanel(MusicPanelRequest(
+            title: song.title ?? "Now Playing",
+            items: items,
+            anchor: 0.92,
+            edge: .top,
+            inset: topInset + barHeight
+        ))
+    }
+
+    /// Bottom sheet: drag the bar or the artwork down to close Now Playing.
+    private var dismissDrag: some Gesture {
+        DragGesture(minimumDistance: 14)
+            .onChanged { value in
+                guard value.translation.height > 0,
+                      value.translation.height > abs(value.translation.width) else { return }
+                dragOffset = value.translation.height
+            }
+            .onEnded { value in
+                let shouldClose = value.translation.height > 130 || value.predictedEndTranslation.height > 380
+                if shouldClose, dragOffset > 0 {
+                    OldMusicHaptics.tap()
+                    navigator.showLibrary()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dragOffset = 0 }
+                } else {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) { dragOffset = 0 }
+                }
+            }
     }
 
     private func reload(tracks: Bool) {
@@ -186,6 +257,9 @@ struct MusicNowPlayingBar: View {
     let flipLocked: Bool
     let onBack: () -> Void
     let onFlip: () -> Void
+    var onOptions: () -> Void = {}
+
+    @State private var didLongPress = false
 
     private let side: CGFloat = 34.33783783783784
 
@@ -227,7 +301,13 @@ struct MusicNowPlayingBar: View {
 
                 Spacer()
 
-                Button(action: onFlip) {
+                Button {
+                    if didLongPress {
+                        didLongPress = false
+                        return
+                    }
+                    onFlip()
+                } label: {
                     ZStack {
                         Image("NowPlayingFlipperBackground")
                             .resizable()
@@ -255,6 +335,14 @@ struct MusicNowPlayingBar: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(flipLocked)
+                // Long press on the album button: options drop-down.
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                        didLongPress = true
+                        OldMusicHaptics.press()
+                        onOptions()
+                    }
+                )
                 .padding(.trailing, 8)
             }
             .frame(height: 60)
@@ -400,14 +488,27 @@ struct MusicNowPlayingTracks: View {
     let tracks: [MPMediaItem]
     let onDoubleTap: () -> Void
 
-    @State private var rating: Int = 0
+    @ObservedObject private var userData = MusicUserData.shared
     @State private var tapLocked = false
+
+    /// Ratings are saved by OldMusic (the library itself is read-only).
+    private var rating: Binding<Int> {
+        Binding(
+            get: { userData.rating(for: player.nowPlayingItem) },
+            set: { value in
+                if let item = player.nowPlayingItem {
+                    OldMusicHaptics.tap()
+                    userData.setRating(value, for: item)
+                }
+            }
+        )
+    }
 
     private let line = Color.oldOS(65, 64, 65)
 
     var body: some View {
         VStack(spacing: 0) {
-            MusicRatingStrip(rating: $rating)
+            MusicRatingStrip(rating: rating)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(
@@ -440,10 +541,6 @@ struct MusicNowPlayingTracks: View {
             }
         }
         .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleTap() })
-        .onAppear { rating = player.nowPlayingItem?.rating ?? 0 }
-        .onChange(of: player.nowPlayingItem?.persistentID) { _ in
-            rating = player.nowPlayingItem?.rating ?? 0
-        }
     }
 }
 
@@ -542,6 +639,8 @@ struct MusicRatingStrip: View {
 /// OldOS `now_playing_footer`: previous / play-pause / next and the volume
 /// slider, extended down behind the home indicator.
 struct MusicNowPlayingFooter: View {
+    @EnvironmentObject private var navigator: MusicNavigator
+    @EnvironmentObject private var library: MusicLibrary
     @ObservedObject private var player = MusicPlayer.shared
     @ObservedObject private var volume = MusicVolume.shared
     let bottomInset: CGFloat
@@ -550,12 +649,14 @@ struct MusicNowPlayingFooter: View {
         VStack(spacing: 0) {
             HStack(alignment: .center) {
                 Spacer()
-                Button {
+                // Long press: Recently Played drop-down (OldSafari Back history).
+                MusicTransportButton(image: "prevtrack", width: 31, height: 23) {
                     player.previous()
-                } label: {
-                    Image("prevtrack").resizable().scaledToFit().frame(width: 31, height: 23)
+                } onLongPress: {
+                    navigator.presentPanel(MusicPanels.recentlyPlayed(
+                        navigator: navigator, library: library, anchor: 0.25, edge: .bottom, inset: bottomInset + 110
+                    ))
                 }
-                .buttonStyle(.plain)
                 Spacer()
                 Button {
                     player.togglePlayPause()
@@ -564,12 +665,14 @@ struct MusicNowPlayingFooter: View {
                 }
                 .buttonStyle(.plain)
                 Spacer()
-                Button {
+                // Long press: Up Next drop-down (OldSafari Forward history).
+                MusicTransportButton(image: "nexttrack", width: 31, height: 23) {
                     player.next()
-                } label: {
-                    Image("nexttrack").resizable().scaledToFit().frame(width: 31, height: 23)
+                } onLongPress: {
+                    navigator.presentPanel(MusicPanels.upNext(
+                        navigator: navigator, anchor: 0.75, edge: .bottom, inset: bottomInset + 110
+                    ))
                 }
-                .buttonStyle(.plain)
                 Spacer()
             }
             .frame(height: 55)
@@ -666,5 +769,44 @@ struct MusicPressedImageStyle: ButtonStyle {
                 Image(pressedImage)
             }
         }
+    }
+}
+
+/// Transport artwork button with an optional long press (OldSafari
+/// `OldOSToolBarButton` behaviour: the long press swallows the tap).
+struct MusicTransportButton: View {
+    let image: String
+    let width: CGFloat
+    let height: CGFloat
+    let action: () -> Void
+    var onLongPress: (() -> Void)? = nil
+
+    @State private var didLongPress = false
+
+    var body: some View {
+        Button {
+            if didLongPress {
+                didLongPress = false
+                return
+            }
+            OldMusicHaptics.tap()
+            action()
+        } label: {
+            Image(image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: width, height: height)
+                .frame(width: width + 24, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.38).onEnded { _ in
+                guard let onLongPress else { return }
+                didLongPress = true
+                OldMusicHaptics.press()
+                onLongPress()
+            }
+        )
     }
 }

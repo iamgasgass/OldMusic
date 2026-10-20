@@ -23,6 +23,10 @@ It is not a skin over the Music app. OldMusic is a SwiftUI application that read
 - **Speed button** (1× / 2× / ½×) replaces Repeat for podcasts, audiobooks and iTunes U, as on iOS 6.
 - **Lyrics** appear over the artwork together with the scrubber when the song has them.
 - **Shake to Shuffle** with the OldOS iOS 6 switch (More › Settings), on by default like iOS 6.
+- **Bottom sheet player**: a mini player in iOS 6 black glass sits above the tab bar (artwork, title, play/pause, next, glossy OldSafari progress line). Tap or drag it up to open Now Playing as a sheet, drag Now Playing down to close it, swipe the mini player left / right to skip.
+- **OldSafari drop-down panels** (the Back / Forward history "tendina"): long press Next → **Up Next**, long press Previous → **Recently Played** (with Clear History), long press the mini player → Up Next, long press the album button in Now Playing → **options** (Go to Album, Go to Artist, Favorites, Genius Mix, Up Next, Share), **Sort** button on Songs (Title, Artist, Album, Recently Added, Most Played).
+- **Favorites and star ratings** saved by OldMusic, with the **Favorites** and iOS 6 **My Top Rated** smart playlists.
+- **Album long press** action sheet: Play, Shuffle, Play Next, Add to Up Next, Go to Artist.
 - **All Songs** row on artists with more than one album; the last selected tab is remembered; haptic feedback on controls.
 - Playlists, Artists, Songs, Videos and More (Albums, Audiobooks, Composers, Genres, iTunes U, Podcasts), all navigable with the iOS 6 push / pop slides.
 - Search in every list with Artists, Albums and Songs results.
