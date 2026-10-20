@@ -169,7 +169,13 @@ struct MusicNavigationBar: View {
         // Same as the OldSafari chrome: one gradient from the top of the
         // screen (behind the status bar / Dynamic Island) to the hairline.
         .background(
-            LinearGradient(oldOS: theme.barGradient)
+            VStack(spacing: 0) {
+                Color.clear.frame(height: topInset)
+                Color.clear
+                    .frame(height: barHeight)
+                    .oldOSInnerShadowBottom(color: theme.barHighlight, radius: 0.025)
+            }
+            .background(LinearGradient(oldOS: theme.barGradient))
         )
         .oldOSBorder(width: 1, edges: [.bottom], color: theme.barHairline)
     }
