@@ -89,14 +89,33 @@ struct MusicAlbumView: View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 0) {
                 header(artwork: artwork, count: tracks.count, totalTime: totalTime)
-
-                // iOS 6: "Shuffle ⤮" row between the album header and the tracks.
-                MusicShuffleRow {
-                    MusicPlayer.shared.play(tracks, shuffle: true)
-                    navigator.showNowPlaying()
-                }
-                .buttonStyle(.plain)
-                .background(theme.listBackground)
+                    .overlay(alignment: .bottomTrailing) {
+                        // iOS 6 album header: grey "Shuffle ⤮" button, bottom right.
+                        Button {
+                            navigator.tap {
+                                MusicPlayer.shared.play(tracks, shuffle: true)
+                                navigator.showNowPlaying()
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Text("Shuffle")
+                                    .font(OldOSFont.bold(14))
+                                    .lineLimit(1)
+                                Image("shuffle_icon")
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 13)
+                            }
+                            .foregroundColor(theme.editButtonText)
+                            .shadow(color: theme.editButtonTextShadow, radius: 0, x: 0, y: theme.editButtonTextShadowY)
+                            .padding(.horizontal, 7)
+                            .frame(height: 27)
+                        }
+                        .buttonStyle(MusicAlbumShuffleButtonStyle())
+                        .padding(.trailing, 9)
+                        .padding(.bottom, 10)
+                    }
 
                 ForEach(Array(tracks.enumerated()), id: \.element.persistentID) { index, track in
                     Button {
@@ -205,6 +224,24 @@ struct MusicAlbumView: View {
         )
         .background(index % 2 == 0 ? theme.albumRowEven : theme.albumRowOdd)
         .contentShape(Rectangle())
+    }
+
+    private struct MusicAlbumShuffleButtonStyle: ButtonStyle {
+        @Environment(\.oldMusicTheme) private var theme
+
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(LinearGradient(oldOS: theme.editButtonGradient))
+                        .brightness(configuration.isPressed ? -0.12 : 0)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(theme.editButtonStroke, lineWidth: 1)
+                )
+                .contentShape(Rectangle())
+        }
     }
 
     private var releaseYear: String? {

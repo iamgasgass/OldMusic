@@ -31,8 +31,8 @@ struct MusicMoreView: View {
                     open(entry.title)
                 } label: {
                     moreRow(title: entry.title, detail: nil) {
-                        // Dark: the glyphs take the same grey as the Settings icons.
                         if theme.isDark {
+                            // Same grey as the Settings glyphs below.
                             Image(entry.icon)
                                 .renderingMode(.template)
                                 .foregroundColor(.oldOS(126, 131, 140))
