@@ -643,6 +643,7 @@ struct MusicNowPlayingFooter: View {
     @EnvironmentObject private var library: MusicLibrary
     @ObservedObject private var player = MusicPlayer.shared
     @ObservedObject private var volume = MusicVolume.shared
+    @ObservedObject private var airPlay = MusicAirPlay.shared
     let bottomInset: CGFloat
 
     var body: some View {
@@ -677,16 +678,26 @@ struct MusicNowPlayingFooter: View {
             }
             .frame(height: 55)
 
-            OldMusicSlider(
-                value: $volume.level,
-                onChanged: { volume.set($0) },
-                onEnded: { volume.set($0) }
-            ) { parts in
-                OldMusicSliderSkin(parts: parts, barHeight: 8.5)
+            // iOS 6: the AirPlay button sits right of the volume slider when
+            // AirPlay devices are around.
+            HStack(spacing: 8) {
+                OldMusicSlider(
+                    value: $volume.level,
+                    onChanged: { volume.set($0) },
+                    onEnded: { volume.set($0) }
+                ) { parts in
+                    OldMusicSliderSkin(parts: parts, barHeight: 8.5)
+                }
+                .frame(height: 25)
+                if airPlay.routesAvailable {
+                    MusicAirPlayButton()
+                }
             }
-            .frame(height: 25)
-            .padding(.horizontal, 30)
+            .padding(.leading, 30)
+            .padding(.trailing, airPlay.routesAvailable ? 14 : 30)
             .padding(.top, 5)
+            .onAppear { airPlay.startWatching() }
+            .onDisappear { airPlay.stopWatching() }
 
             Spacer(minLength: 0)
         }

@@ -262,7 +262,7 @@ struct MusicCoverFlowCarousel: UIViewControllerRepresentable {
         )
         coordinator.tapCatcher = catcher
 
-        let nowPlayingAlbum = MPMusicPlayerController.systemMusicPlayer.nowPlayingItem?.albumPersistentID
+        let nowPlayingAlbum = MusicPlayer.shared.system.nowPlayingItem?.albumPersistentID
         if let index = albums.firstIndex(where: { $0.representativeItem?.albumPersistentID == nowPlayingAlbum }) {
             carousel.currentItemIndex = index
         }

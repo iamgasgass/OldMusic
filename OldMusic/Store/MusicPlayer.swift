@@ -1,8 +1,11 @@
 import SwiftUI
 import MediaPlayer
+import AVFoundation
 
-/// Wraps the system music player (the same one the iPod app drove on iOS 6)
-/// and publishes its state, so every screen updates reactively.
+/// Wraps OldMusic's own queue player and publishes its state, so every screen
+/// updates reactively. Playback belongs to OldMusic (not to the Music app),
+/// so the Dynamic Island / Lock Screen player opens OldMusic when tapped,
+/// and the output can be sent to AirPlay devices.
 ///
 /// Compared with the OldOS iPod app:
 ///  - playback is never gated on an Apple Music subscription;
@@ -12,7 +15,7 @@ import MediaPlayer
 final class MusicPlayer: ObservableObject {
     static let shared = MusicPlayer()
 
-    let system = MPMusicPlayerController.systemMusicPlayer
+    let system = MPMusicPlayerController.applicationQueuePlayer
 
     @Published private(set) var nowPlayingItem: MPMediaItem?
     @Published private(set) var playbackState: MPMusicPlaybackState = .stopped
@@ -95,6 +98,7 @@ final class MusicPlayer: ObservableObject {
         }
         system.setQueue(with: descriptor)
         queue = items
+        activatePlaybackSession()
         system.prepareToPlay { [weak self] error in
             DispatchQueue.main.async {
                 if let error {
@@ -115,8 +119,23 @@ final class MusicPlayer: ObservableObject {
             system.pause()
             playbackState = .paused
         } else {
+            activatePlaybackSession()
             system.play()
             playbackState = .playing
+        }
+    }
+
+    /// Long-form playback session: lets OldMusic own Now Playing (Dynamic
+    /// Island, Lock Screen) and play to AirPlay 2 speakers. Kept "ambient"
+    /// until the first play, so opening the app never stops other audio.
+    private func activatePlaybackSession() {
+        let session = AVAudioSession.sharedInstance()
+        guard session.category != .playback else { return }
+        do {
+            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            try session.setActive(true)
+        } catch {
+            print("OldMusic: cannot activate playback session (\(error.localizedDescription))")
         }
     }
 
