@@ -106,13 +106,24 @@ final class MusicVolume: ObservableObject {
         pollTimer = nil
     }
 
-    /// Ambient (mixable) unless OldMusic is playing, so coming back to the
-    /// app never stops another app's audio.
+    /// Ambient (mixable) until OldMusic plays for the first time, so opening
+    /// the app never stops another app's audio. Once OldMusic owns the
+    /// playback session it is never downgraded again: an ambient session
+    /// would cut the music as soon as the app leaves the foreground
+    /// (Control Center, Notification Center, Home…).
     private func activate() {
-        do {
-            if session.category != .playback || !MusicPlayer.shared.isPlaying {
-                try session.setCategory(.ambient, options: [.mixWithOthers])
+        let player = MusicPlayer.shared
+        if player.ownsPlaybackSession {
+            // Only re-assert it if iOS reset it (media services reset);
+            // never re-activate here, so returning to the app while paused
+            // does not stop another app's audio.
+            if session.category != .playback {
+                player.activatePlaybackSession()
             }
+            return
+        }
+        do {
+            try session.setCategory(.ambient, options: [.mixWithOthers])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             print("OldMusic: cannot activate the audio session (\(error.localizedDescription))")

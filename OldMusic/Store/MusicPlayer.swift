@@ -45,6 +45,9 @@ final class MusicPlayer: ObservableObject {
         observers.append(center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             self?.refresh()
         })
+        observers.append(center.addObserver(forName: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance(), queue: .main) { [weak self] note in
+            self?.handleInterruption(note)
+        })
     }
 
     deinit {
@@ -125,17 +128,55 @@ final class MusicPlayer: ObservableObject {
         }
     }
 
+    /// True once OldMusic has started playing in this process. From then on
+    /// the session stays in long-form playback until the app is closed from
+    /// the multitasking switcher, so the music keeps going behind Control
+    /// Center, Notification Center, the Lock Screen and other apps.
+    private(set) var ownsPlaybackSession = false
+    /// Remembered when a call / Siri / alarm interrupts, to resume afterwards (iOS 6).
+    private var resumeAfterInterruption = false
+
     /// Long-form playback session: lets OldMusic own Now Playing (Dynamic
-    /// Island, Lock Screen) and play to AirPlay 2 speakers. Kept "ambient"
-    /// until the first play, so opening the app never stops other audio.
-    private func activatePlaybackSession() {
+    /// Island, Lock Screen), play in the background and to AirPlay 2
+    /// speakers. Kept "ambient" until the first play, so opening the app
+    /// never stops other audio.
+    func activatePlaybackSession() {
         let session = AVAudioSession.sharedInstance()
-        guard session.category != .playback else { return }
         do {
-            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            if session.category != .playback || session.routeSharingPolicy != .longFormAudio {
+                try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            }
             try session.setActive(true)
+            ownsPlaybackSession = true
         } catch {
             print("OldMusic: cannot activate playback session (\(error.localizedDescription))")
+        }
+    }
+
+    private func handleInterruption(_ note: Notification) {
+        guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        switch type {
+        case .began:
+            // A suspended app is reported as an interruption too: only real
+            // interruptions (calls, Siri, alarms) pause the music.
+            if (note.userInfo?[AVAudioSessionInterruptionReasonKey] as? UInt)
+                .flatMap(AVAudioSession.InterruptionReason.init(rawValue:)) == .appWasSuspended {
+                return
+            }
+            resumeAfterInterruption = ownsPlaybackSession && (isPlaying || system.playbackState == .interrupted)
+            refresh()
+        case .ended:
+            let options = (note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
+                .map(AVAudioSession.InterruptionOptions.init(rawValue:)) ?? []
+            if resumeAfterInterruption && options.contains(.shouldResume) {
+                activatePlaybackSession()
+                system.play()
+            }
+            resumeAfterInterruption = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.refresh() }
+        @unknown default:
+            break
         }
     }
 
