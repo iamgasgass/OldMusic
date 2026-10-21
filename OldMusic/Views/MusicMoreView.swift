@@ -104,7 +104,7 @@ struct MusicMoreView: View {
                         .foregroundColor(theme.cardFieldText)
                         .lineLimit(1)
                 }
-                Image("UITableNext").padding(.trailing, 12)
+                MusicChevron().padding(.trailing, 12)
             }
             .padding(.leading, 16)
             MusicSeparator()

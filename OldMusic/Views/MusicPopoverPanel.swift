@@ -148,7 +148,7 @@ struct OldOSPopoverPanel: View {
                     } else if item.showsChevron {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(Color.white.opacity(0.35))
+                            .foregroundColor(theme.isDark ? .oldOS(126, 131, 140) : Color.white.opacity(0.35))
                     }
                 }
                 .padding([.leading, .trailing], 14)

@@ -116,6 +116,24 @@ struct MusicSectionHeader: View {
     }
 }
 
+// MARK: - Chevron
+
+/// The iOS 6 table disclosure chevron. In Dark Mode it takes the same grey
+/// as the glyphs of the More tab.
+struct MusicChevron: View {
+    @Environment(\.oldMusicTheme) private var theme
+
+    var body: some View {
+        if theme.isDark {
+            Image("UITableNext")
+                .renderingMode(.template)
+                .foregroundColor(.oldOS(126, 131, 140))
+        } else {
+            Image("UITableNext")
+        }
+    }
+}
+
 // MARK: - Rows
 
 /// 44pt single-line row with optional disclosure arrow (playlists, genres, composers).
@@ -136,7 +154,7 @@ struct MusicTextRow: View {
                     .padding(.trailing, 40)
                 Spacer()
                 if disclosure {
-                    Image("UITableNext").padding(.trailing, 12)
+                    MusicChevron().padding(.trailing, 12)
                 }
             }
             Spacer(minLength: 0)
@@ -180,7 +198,7 @@ struct MusicArtworkRow: View {
                 .padding(.trailing, 40)
                 Spacer()
                 if disclosure {
-                    Image("UITableNext").padding(.trailing, 12)
+                    MusicChevron().padding(.trailing, 12)
                 }
             }
             MusicSeparator()

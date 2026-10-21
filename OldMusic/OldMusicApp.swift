@@ -57,6 +57,7 @@ final class OldMusicSceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneWillResignActive(_ scene: UIScene) {
         MusicAirPlay.shared.stopWatching()
+        MusicVolume.shared.suspend()
     }
 }
 

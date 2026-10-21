@@ -57,7 +57,7 @@ struct MusicSmartPlaylistRow: View {
                     .foregroundColor(theme.listRowText)
                     .lineLimit(1)
                 Spacer()
-                Image("UITableNext").padding(.trailing, 12)
+                MusicChevron().padding(.trailing, 12)
             }
             Spacer(minLength: 0)
             MusicSeparator()
