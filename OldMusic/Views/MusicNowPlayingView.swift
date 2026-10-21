@@ -691,13 +691,13 @@ struct MusicNowPlayingFooter: View {
                 .frame(height: 25)
                 if airPlay.routesAvailable {
                     MusicAirPlayButton()
+                        .transition(.opacity.combined(with: .scale(scale: 0.6)))
                 }
             }
             .padding(.leading, 30)
             .padding(.trailing, airPlay.routesAvailable ? 14 : 30)
             .padding(.top, 5)
-            .onAppear { airPlay.startWatching() }
-            .onDisappear { airPlay.stopWatching() }
+            .animation(.easeInOut(duration: 0.25), value: airPlay.routesAvailable)
 
             Spacer(minLength: 0)
         }

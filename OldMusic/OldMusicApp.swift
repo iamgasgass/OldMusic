@@ -50,6 +50,13 @@ final class OldMusicSceneDelegate: UIResponder, UIWindowSceneDelegate {
         MusicSettings.shared.apply()
         window?.rootViewController?.becomeFirstResponder()
         MusicVolume.shared.install(in: window)
+        MusicVolume.shared.reactivate()
+        // AirPlay devices are already known when Now Playing slides up.
+        MusicAirPlay.shared.startWatching()
+    }
+
+    func sceneWillResignActive(_ scene: UIScene) {
+        MusicAirPlay.shared.stopWatching()
     }
 }
 

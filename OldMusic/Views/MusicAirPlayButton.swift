@@ -53,14 +53,20 @@ final class MusicAirPlay: ObservableObject {
 /// underneath (invisible) and handles the tap, opening the AirPlay device list.
 struct MusicAirPlayButton: View {
     @ObservedObject private var airPlay = MusicAirPlay.shared
+    @State private var pressed = false
 
     var body: some View {
         ZStack {
-            MusicRoutePicker()
+            MusicRoutePicker(pressed: $pressed)
             Image(systemName: "airplayaudio")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(airPlay.isActive ? .oldOS(90, 160, 245) : .white)
                 .shadow(color: Color.black.opacity(0.8), radius: 0, x: 0, y: -1)
+                // iOS 6 white glow while touched.
+                .shadow(color: Color.white.opacity(pressed ? 0.9 : 0), radius: 6)
+                .scaleEffect(pressed ? 0.92 : 1)
+                .animation(.easeOut(duration: 0.15), value: pressed)
+                .animation(.easeInOut(duration: 0.25), value: airPlay.isActive)
                 .allowsHitTesting(false)
         }
         .frame(width: 30, height: 25)
@@ -68,14 +74,34 @@ struct MusicAirPlayButton: View {
 }
 
 private struct MusicRoutePicker: UIViewRepresentable {
+    @Binding var pressed: Bool
+
+    func makeCoordinator() -> Coordinator { Coordinator(pressed: $pressed) }
+
     func makeUIView(context: Context) -> AVRoutePickerView {
         let picker = AVRoutePickerView()
         picker.prioritizesVideoDevices = false
         picker.tintColor = .clear
         picker.activeTintColor = .clear
         picker.backgroundColor = .clear
+        picker.delegate = context.coordinator
         return picker
     }
 
     func updateUIView(_ uiView: AVRoutePickerView, context: Context) {}
+
+    final class Coordinator: NSObject, AVRoutePickerViewDelegate {
+        @Binding var pressed: Bool
+
+        init(pressed: Binding<Bool>) { _pressed = pressed }
+
+        func routePickerViewWillBeginPresentingRoutes(_ routePickerView: AVRoutePickerView) {
+            pressed = true
+            OldMusicHaptics.press()
+        }
+
+        func routePickerViewDidEndPresentingRoutes(_ routePickerView: AVRoutePickerView) {
+            pressed = false
+        }
+    }
 }
